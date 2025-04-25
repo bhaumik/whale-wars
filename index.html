@@ -426,10 +426,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Initialize SDK and hide splash screen
-                await sdk.actions.ready();
-                
-                // Get user info from Farcaster context
+                // Get user info from Farcaster context first
                 const context = await sdk.context;
                 
                 // Update player info if available
@@ -468,6 +465,10 @@
                 document.getElementById('start-screen').style.display = 'block';
                 document.getElementById('score').style.display = 'none';
 
+                // Now that everything is initialized, hide the splash screen and disable native gestures
+                // since we're using mouse controls for the game
+                await sdk.actions.ready({ disableNativeGestures: true });
+                
                 console.log('Game initialized successfully');
             } catch (e) {
                 console.error('Error initializing game:', e);
