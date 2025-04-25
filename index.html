@@ -645,13 +645,18 @@
                     
                     const avatar = this.avatarCache.get(player.id);
                     if (avatar) {
-                        // Draw avatar
+                        // Calculate source dimensions for square crop
+                        const sourceSize = Math.min(avatar.width, avatar.height);
+                        const sourceX = (avatar.width - sourceSize) / 2;
+                        const sourceY = (avatar.height - sourceSize) / 2;
+                        
+                        // Draw avatar with square crop
                         const size = player.radius * 2;
-                        this.ctx.drawImage(avatar, 
-                            player.x - player.radius, 
-                            player.y - player.radius, 
-                            size, 
-                            size
+                        this.ctx.drawImage(avatar,
+                            sourceX, sourceY, sourceSize, sourceSize,  // Source (crop)
+                            player.x - player.radius,                  // Dest x
+                            player.y - player.radius,                  // Dest y
+                            size, size                                // Dest size
                         );
                     } else {
                         // Fallback to colored circle
@@ -670,22 +675,23 @@
                     }
                     this.ctx.restore();
                     
-                    // Draw player name
+                    // Draw player name above avatar
                     if (player.name) {
                         // Calculate font size based on radius (with reasonable limits)
-                        const baseFontSize = Math.min(player.radius * 0.8, Math.max(12, player.radius * 0.4));
+                        const baseFontSize = Math.min(player.radius * 0.6, Math.max(12, player.radius * 0.3));
                         this.ctx.font = `bold ${baseFontSize}px -apple-system, BlinkMacSystemFont, Arial`;
                         
-                        // Set text style for better visibility inside circle
+                        // Set text style for better visibility
                         this.ctx.fillStyle = 'white';
-                        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                        this.ctx.lineWidth = baseFontSize * 0.15;
+                        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                        this.ctx.lineWidth = baseFontSize * 0.2;
                         this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'middle';
+                        this.ctx.textBaseline = 'bottom';
                         
-                        // Draw name in center of circle
-                        this.ctx.strokeText(player.name, player.x, player.y);
-                        this.ctx.fillText(player.name, player.x, player.y);
+                        // Draw name above circle with padding
+                        const textY = player.y - player.radius - (baseFontSize * 0.3);
+                        this.ctx.strokeText(player.name, player.x, textY);
+                        this.ctx.fillText(player.name, player.x, textY);
                     }
                 });
                 
