@@ -270,10 +270,9 @@
                 console.log('🎮 [START] Connecting to server...');
                 this.connectToServer();
                 
-                // Show score and hide start screen
-                document.getElementById('start-screen').style.display = 'none';
-                document.getElementById('score').style.display = 'none';
+                // Show leaderboard, hide score initially
                 document.getElementById('leaderboard').style.display = 'block';
+                document.getElementById('score').style.display = 'none';
                 
                 console.log('🎮 [START] UI updated');
                 
@@ -715,7 +714,6 @@
                     cancelAnimationFrame(this.gameLoop);
                     this.gameLoop = null;
                 }
-                document.getElementById('start-screen').style.display = 'block';
             }
 
             resizeCanvas() {
