@@ -20,6 +20,11 @@ app.get('/.well-known/farcaster.json', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', '.well-known', 'farcaster.json'));
 });
 
+// Root route should serve the game
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Specific routes for images to ensure they're served
 app.get('/icon.png', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'icon.png'));
@@ -30,16 +35,6 @@ app.get('/preview.png', (req, res) => {
 });
 
 const port = process.env.PORT || 8080;
-
-// Serve a simple status page
-app.get('/', (req, res) => {
-    res.send(`
-        Whale Wars WebSocket Server - Status: Running ✅<br>
-        <h3>Image Status:</h3>
-        <img src="/icon.png" alt="Icon Test" style="width: 50px; height: 50px;"><br>
-        <img src="/preview.png" alt="Preview Test" style="width: 200px;">
-    `);
-});
 
 const server = app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
