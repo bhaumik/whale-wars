@@ -231,10 +231,14 @@
                 this.gameOverScreen.style.fontSize = '48px';
                 this.gameOverScreen.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
                 this.gameOverScreen.style.display = 'none';
+                this.gameOverScreen.style.width = '100%';
+                this.gameOverScreen.style.maxWidth = '600px';
+                this.gameOverScreen.style.padding = '20px';
                 this.gameOverScreen.innerHTML = `
                     <div style="font-size: 64px; margin-bottom: 30px;">The Earth is Flat</div>
                     <div style="font-size: 36px; margin-bottom: 20px;">You fell off</div>
                     <div style="font-size: 72px; margin-bottom: 30px;">🫵 😂</div>
+                    <div id="final-score" style="font-size: 32px; margin-bottom: 30px; color: #6366f1;"></div>
                     <button id="respawn-button" style="
                         margin-top: 20px;
                         padding: 15px 30px;
@@ -764,8 +768,9 @@
                 if (!this.dangerZone.falling) {
                     this.dangerZone.falling = true;
                     this.dangerZone.fallStartTime = Date.now();
-                    // Optional: Play falling sound effect
-                    // this.playFallingSound();
+                    
+                    // Hide leaderboard when falling starts
+                    document.getElementById('leaderboard').style.display = 'none';
                 }
             }
 
@@ -782,8 +787,9 @@
                     this.dangerZone.intensity = 0;
                     this.dangerZone.active = false;
                     
-                    // Hide game over screen
+                    // Hide game over screen and show leaderboard again
                     this.gameOverScreen.style.display = 'none';
+                    document.getElementById('leaderboard').style.display = 'block';
                     
                     // Update server
                     this.ws.send(JSON.stringify({
@@ -811,6 +817,15 @@
                     
                     // Show game over screen at animation end
                     if (progress >= 1) {
+                        // Update final score before showing game over screen
+                        const player = this.players.get(this.playerId);
+                        if (player) {
+                            const finalScore = Math.round(player.radius);
+                            const finalScoreEl = document.getElementById('final-score');
+                            if (finalScoreEl) {
+                                finalScoreEl.textContent = `Final Size: ${finalScore}`;
+                            }
+                        }
                         this.gameOverScreen.style.display = 'block';
                     }
                 } else if (this.dangerZone.active) {
