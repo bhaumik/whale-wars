@@ -167,7 +167,7 @@
                 this.reconnectAttempts = 0;
                 this.user = user;
                 
-                // Store user info for WebSocket connection
+                // Store user info for WebSocket connection and display
                 this.playerInfo = {
                     name: user?.displayName || user?.username || 'Anonymous',
                     fid: user?.fid || null,
@@ -177,7 +177,10 @@
                 
                 // Initialize leaderboard
                 this.leaderboardEl = document.getElementById('leaderboard-entries');
-                this.updateLeaderboard();
+                if (!this.leaderboardEl) {
+                    console.error('❌ Could not find leaderboard element');
+                    return;
+                }
                 
                 // Camera/viewport
                 this.camera = {
@@ -211,6 +214,7 @@
                 // Show score and hide start screen
                 document.getElementById('start-screen').style.display = 'none';
                 document.getElementById('score').style.display = 'block';
+                document.getElementById('leaderboard').style.display = 'block';
                 
                 // Start game loop
                 this.gameLoop = requestAnimationFrame(time => this.update(time));
@@ -374,6 +378,8 @@
             }
 
             updateLeaderboard() {
+                if (!this.leaderboardEl) return;  // Skip if element not found
+                
                 // Sort players by size
                 const sortedPlayers = Array.from(this.players.values())
                     .sort((a, b) => b.radius - a.radius);
@@ -499,8 +505,11 @@
                     // Draw player name
                     if (player.name) {
                         this.ctx.fillStyle = 'white';
+                        this.ctx.strokeStyle = 'black';
+                        this.ctx.lineWidth = 3;
                         this.ctx.font = '14px Arial';
                         this.ctx.textAlign = 'center';
+                        this.ctx.strokeText(player.name, player.x, player.y - player.radius - 5);
                         this.ctx.fillText(player.name, player.x, player.y - player.radius - 5);
                     }
                 });
@@ -592,30 +601,6 @@
                 const canvas = document.getElementById('game-canvas');
                 const game = new Game(canvas, userContext);
                 
-                // Update player info display
-                console.log('👤 Updating player display...');
-                const playerName = document.getElementById('player-name');
-                const playerAvatar = document.getElementById('player-avatar');
-                
-                if (isMiniApp && userContext) {
-                    console.log('🎭 Setting Mini App user display:', {
-                        displayName: userContext.displayName,
-                        username: userContext.username,
-                        fid: userContext.fid
-                    });
-                    // In Mini App with valid user context
-                    playerName.textContent = userContext.displayName || userContext.username || `Player #${userContext.fid}`;
-                    if (userContext.pfpUrl) {
-                        console.log('🖼 Setting user profile picture:', userContext.pfpUrl);
-                        playerAvatar.src = userContext.pfpUrl;
-                    }
-                } else {
-                    console.log('👾 Setting anonymous user display');
-                    // In standalone web or no valid user context
-                    playerName.textContent = 'Anonymous';
-                    playerAvatar.src = '/icon.png';
-                }
-
                 // Set initial canvas size
                 console.log('📐 Setting canvas size...');
                 game.resizeCanvas();
@@ -643,9 +628,11 @@
                 console.log('🎉 Game initialized successfully');
             } catch (e) {
                 console.error('❌ Error initializing game:', e);
-                // Show error state
-                const playerName = document.getElementById('player-name');
-                playerName.textContent = 'Error loading game';
+                // Show error state in leaderboard
+                const leaderboardEl = document.getElementById('leaderboard-entries');
+                if (leaderboardEl) {
+                    leaderboardEl.innerHTML = '<div class="error">Error loading game</div>';
+                }
                 document.getElementById('leaderboard').style.display = 'block';
                 
                 // If in Mini App, still hide splash screen
