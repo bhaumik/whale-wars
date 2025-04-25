@@ -5,9 +5,18 @@ export default function handler(req, res) {
 
   // Handle the frame action here
   // For now, just return a basic response
-  return res.status(200).json({
-    version: 'vNext',
-    image: 'https://whale-wars.vercel.app/preview.png',
-    buttons: [{ label: 'Play Again', action: 'post' }],
+  res.send({
+    version: 'next',
+    image: 'https://whale-wars.onrender.com/preview.png',
+    button: {
+      title: 'Play',
+      action: {
+        type: 'launch_frame',
+        name: 'Whale Wars',
+        url: 'https://whale-wars.onrender.com',
+        splashImageUrl: 'https://whale-wars.onrender.com/icon.png',
+        splashBackgroundColor: '#f5f5f5'
+      }
+    }
   });
 } 

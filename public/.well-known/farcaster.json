@@ -4,14 +4,19 @@
     "payload": "eyJkb21haW4iOiJ3aGFsZS13YXJzLnZlcmNlbC5hcHAifQ",
     "signature": "MHgxY2Q3ZDY3N2RhYjIzZDMxNzc4N2VmOTNmN2NmN2QyODBmZjE4OTE4NWU2YWExNDAzZDQ1MTY2MDBmYjViMDkxN2ViMzdjODkxNWU0YTcwZGQyZjAxYjdiZTJkNTY2ODNiMWM3MTEwOGM5ZGRmNWMxM2EwZTRjNjA4OTMyZDhmNDFi"
   },
-  "frame": {
-    "version": "1",
+  "frames": {
+    "version": "next",
+    "button": {
+      "title": "Play",
+      "action": {
+        "type": "launch_frame"
+      }
+    },
+    "iconUrl": "https://whale-wars.onrender.com/icon.png",
+    "homeUrl": "https://whale-wars.onrender.com",
+    "imageUrl": "https://whale-wars.onrender.com/preview.png",
     "name": "Whale Wars",
-    "iconUrl": "https://whale-wars.vercel.app/icon.png",
-    "homeUrl": "https://whale-wars.vercel.app",
-    "imageUrl": "https://whale-wars.vercel.app/preview.png",
-    "buttonTitle": "Play",
-    "splashImageUrl": "https://whale-wars.vercel.app/icon.png",
+    "splashImageUrl": "https://whale-wars.onrender.com/icon.png",
     "splashBackgroundColor": "#f5f5f5"
   }
 } 

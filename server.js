@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors({
-    origin: ['https://whale-wars.vercel.app', 'http://localhost:3000'],
+    origin: ['https://whale-wars.vercel.app', 'https://whale-wars.onrender.com', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true
 }));
@@ -15,11 +15,25 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
+// Specific routes for images to ensure they're served
+app.get('/icon.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'icon.png'));
+});
+
+app.get('/preview.png', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'preview.png'));
+});
+
 const port = process.env.PORT || 8080;
 
 // Serve a simple status page
 app.get('/', (req, res) => {
-    res.send('Whale Wars WebSocket Server - Status: Running');
+    res.send(`
+        Whale Wars WebSocket Server - Status: Running<br>
+        <h3>Image Status:</h3>
+        <img src="/icon.png" alt="Icon Test" style="width: 50px; height: 50px;"><br>
+        <img src="/preview.png" alt="Preview Test" style="width: 200px;">
+    `);
 });
 
 const server = app.listen(port, () => {
