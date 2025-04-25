@@ -4,21 +4,15 @@
     "payload": "",
     "signature": ""
   },
-  "frames": {
-    "version": "next",
-    "image": {
-      "url": "https://whale-wars.onrender.com/preview.png",
-      "aspectRatio": "1.91:1"
-    },
-    "buttons": [
-      {
-        "label": "Play",
-        "action": "post"
-      }
-    ],
-    "postUrl": "https://whale-wars.onrender.com/api/frame",
-    "input": {
-      "text": "Optional message"
-    }
+  "frame": {
+    "version": "1",
+    "name": "Whale Wars",
+    "iconUrl": "https://whale-wars.onrender.com/icon.png",
+    "homeUrl": "https://whale-wars.onrender.com",
+    "imageUrl": "https://whale-wars.onrender.com/preview.png",
+    "buttonTitle": "🎮 Play Now",
+    "splashImageUrl": "https://whale-wars.onrender.com/icon.png",
+    "splashBackgroundColor": "#0066cc",
+    "webhookUrl": "https://whale-wars.onrender.com/api/webhook"
   }
 } 
