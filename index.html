@@ -238,7 +238,23 @@
                     <div style="font-size: 64px; margin-bottom: 30px;">The Earth is Flat</div>
                     <div style="font-size: 36px; margin-bottom: 20px;">You fell off</div>
                     <div style="font-size: 72px; margin-bottom: 30px;">🫵 😂</div>
-                    <div id="final-score" style="font-size: 32px; margin-bottom: 30px; color: #6366f1;"></div>
+                    <div id="final-player-info" style="
+                        background: rgba(0, 0, 0, 0.7);
+                        padding: 12px;
+                        border-radius: 12px;
+                        margin: 20px auto;
+                        max-width: 300px;
+                        display: grid;
+                        grid-template-columns: 24px 32px auto 60px;
+                        align-items: center;
+                        gap: 8px;
+                        backdrop-filter: blur(5px);
+                    ">
+                        <div style="text-align: right; color: #aaa; font-size: 16px;" id="final-rank"></div>
+                        <img id="final-avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+                        <div id="final-name" style="color: white; font-size: 16px; text-align: left;"></div>
+                        <div id="final-score" style="color: #6366f1; font-size: 16px; text-align: right;"></div>
+                    </div>
                     <button id="respawn-button" style="
                         margin-top: 20px;
                         padding: 15px 30px;
@@ -817,14 +833,30 @@
                     
                     // Show game over screen at animation end
                     if (progress >= 1) {
-                        // Update final score before showing game over screen
+                        // Get player info and rank
                         const player = this.players.get(this.playerId);
                         if (player) {
-                            const finalScore = Math.round(player.radius);
+                            // Sort players to get rank
+                            const sortedPlayers = Array.from(this.players.values())
+                                .sort((a, b) => b.radius - a.radius);
+                            const rank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
+                            
+                            // Update final player info
+                            const finalRankEl = document.getElementById('final-rank');
+                            const finalAvatarEl = document.getElementById('final-avatar');
+                            const finalNameEl = document.getElementById('final-name');
                             const finalScoreEl = document.getElementById('final-score');
-                            if (finalScoreEl) {
-                                finalScoreEl.textContent = `Final Size: ${finalScore}`;
+                            
+                            if (finalRankEl) finalRankEl.textContent = `${rank}.`;
+                            if (finalAvatarEl) {
+                                finalAvatarEl.src = player.avatar || '/icon.png';
+                                finalAvatarEl.alt = `${player.name}'s avatar`;
+                                finalAvatarEl.onerror = () => {
+                                    finalAvatarEl.src = '/icon.png';
+                                };
                             }
+                            if (finalNameEl) finalNameEl.textContent = player.name;
+                            if (finalScoreEl) finalScoreEl.textContent = Math.round(player.radius);
                         }
                         this.gameOverScreen.style.display = 'block';
                     }
