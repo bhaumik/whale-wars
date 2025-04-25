@@ -48,6 +48,12 @@ const fish = new Map();
 const playerUpdates = new Map(); // Store pending updates
 const UPDATE_INTERVAL = 50; // Send updates every 50ms (20 updates/sec)
 
+// Add player state tracking
+const playerStates = {
+    ALIVE: 'alive',
+    DEAD: 'dead'
+};
+
 // Performance monitoring
 const metrics = {
     connectedPlayers: 0,
@@ -148,18 +154,25 @@ wss.on('connection', (ws) => {
     
     const playerId = uuidv4();
     ws.playerId = playerId;
-    console.log(`Player ${playerId} connected (Total: ${metrics.connectedPlayers})`);
+    console.log(`🌍 [WORLD] Player ${playerId} connected (Total: ${metrics.connectedPlayers})`);
+    console.log(`🌍 [WORLD] Current world state: ${players.size} players, ${fish.size} fish`);
 
     // Don't create a player immediately, wait for playerInfo
-    console.log('Waiting for player info...');
+    console.log('👤 [PLAYER] Waiting for player info...');
 
     // Send initial game state without the new player
-    ws.send(JSON.stringify({
+    const initialState = {
         type: 'init',
         playerId: playerId,
         players: Array.from(players.values()),
         fish: Array.from(fish.values())
-    }));
+    };
+    console.log('🌍 [WORLD] Sending initial state:', {
+        playerId,
+        playerCount: initialState.players.length,
+        fishCount: initialState.fish.length
+    });
+    ws.send(JSON.stringify(initialState));
 
     ws.on('message', (message) => {
         metrics.messagesReceived++;
@@ -167,6 +180,7 @@ wss.on('connection', (ws) => {
         
         try {
             const data = JSON.parse(message);
+            console.log(`📥 [MESSAGE] Received ${data.type} from ${playerId}`);
 
             switch (data.type) {
                 case 'playerInfo':
@@ -179,12 +193,14 @@ wss.on('connection', (ws) => {
                         color: '#0066cc',
                         name: data.name,
                         fid: data.fid,
-                        avatar: data.avatar
+                        avatar: data.avatar,
+                        state: playerStates.ALIVE
                     };
                     
                     // Add player to game
                     players.set(playerId, player);
-                    console.log(`Player ${data.name} (${playerId}) joined the game`);
+                    console.log(`👤 [PLAYER] ${data.name} (${playerId}) joined the game`);
+                    console.log(`🌍 [WORLD] Updated player count: ${players.size}`);
 
                     // Broadcast new player to all clients
                     wss.clients.forEach((client) => {
@@ -197,9 +213,75 @@ wss.on('connection', (ws) => {
                     });
                     break;
 
+                case 'playerDied':
+                    const deadPlayer = players.get(playerId);
+                    if (deadPlayer) {
+                        console.log(`💀 [DEATH] Player ${deadPlayer.name} died:`, {
+                            type: data.deathType,
+                            killedBy: data.killedBy,
+                            position: { x: deadPlayer.x, y: deadPlayer.y },
+                            finalSize: deadPlayer.radius
+                        });
+                        
+                        deadPlayer.state = playerStates.DEAD;
+                        deadPlayer.deathType = data.deathType;
+                        deadPlayer.killedBy = data.killedBy;
+                        
+                        console.log(`🌍 [WORLD] Active players: ${Array.from(players.values()).filter(p => p.state === playerStates.ALIVE).length}`);
+                        
+                        // Broadcast death to all clients
+                        wss.clients.forEach((client) => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                client.send(JSON.stringify({
+                                    type: 'playerDied',
+                                    playerId: playerId,
+                                    deathType: data.deathType,
+                                    killedBy: data.killedBy
+                                }));
+                            }
+                        });
+                    }
+                    break;
+
+                case 'playerRespawn':
+                    const respawningPlayer = players.get(playerId);
+                    if (respawningPlayer) {
+                        console.log(`🔄 [RESPAWN] Player ${respawningPlayer.name} respawning:`, {
+                            previousState: respawningPlayer.state,
+                            deathType: respawningPlayer.deathType
+                        });
+                        
+                        // Reset player state
+                        const spawnX = 2500 + (Math.random() - 0.5) * 1000;
+                        const spawnY = 2500 + (Math.random() - 0.5) * 1000;
+                        
+                        Object.assign(respawningPlayer, {
+                            x: spawnX,
+                            y: spawnY,
+                            radius: 20,
+                            state: playerStates.ALIVE,
+                            deathType: null,
+                            killedBy: null
+                        });
+                        
+                        console.log(`🌍 [WORLD] New spawn location: (${Math.round(spawnX)}, ${Math.round(spawnY)})`);
+                        console.log(`🌍 [WORLD] Active players: ${Array.from(players.values()).filter(p => p.state === playerStates.ALIVE).length}`);
+                        
+                        // Broadcast respawn to all clients
+                        wss.clients.forEach((client) => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                client.send(JSON.stringify({
+                                    type: 'playerRespawned',
+                                    player: respawningPlayer
+                                }));
+                            }
+                        });
+                    }
+                    break;
+
                 case 'updatePlayer':
                     const existingPlayer = players.get(playerId);
-                    if (existingPlayer) {
+                    if (existingPlayer && existingPlayer.state === playerStates.ALIVE) {
                         // Update player state
                         Object.assign(existingPlayer, {
                             x: data.x,
@@ -244,24 +326,33 @@ wss.on('connection', (ws) => {
                     break;
             }
         } catch (error) {
-            console.error('Error processing message:', error);
+            console.error('❌ [ERROR] Processing message:', error);
         }
     });
 
     ws.on('close', () => {
         metrics.connectedPlayers--;
-        console.log(`Player ${playerId} disconnected (Total: ${metrics.connectedPlayers})`);
-        players.delete(playerId);
-
-        // Broadcast player left
-        wss.clients.forEach((client) => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                    type: 'playerLeft',
-                    playerId: playerId
-                }));
+        console.log(`👋 [DISCONNECT] Player ${playerId} disconnected (Total: ${metrics.connectedPlayers})`);
+        
+        // Only remove player if they're disconnected for more than 30 seconds
+        setTimeout(() => {
+            const player = players.get(playerId);
+            if (player && !Array.from(wss.clients).some(client => client.playerId === playerId)) {
+                console.log(`🗑️ [CLEANUP] Removing inactive player ${player.name} after 30s`);
+                players.delete(playerId);
+                console.log(`🌍 [WORLD] Updated player count: ${players.size}`);
+                
+                // Broadcast player left
+                wss.clients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            type: 'playerLeft',
+                            playerId: playerId
+                        }));
+                    }
+                });
             }
-        });
+        }, 30000);
     });
 
     ws.on('error', (error) => {

@@ -283,56 +283,74 @@
                     this.metrics.bytesReceived = 0;
                     this.metrics.lastMetricsTime = now;
                 }, 5000);
+
+                // Add player states
+                this.playerStates = {
+                    ALIVE: 'alive',
+                    DEAD: 'dead'
+                };
+                
+                // Add player state
+                this.playerState = this.playerStates.ALIVE;
+
+                this.debugMode = true; // Enable debug logging
+            }
+
+            log(type, message, data = {}) {
+                if (!this.debugMode) return;
+                const emoji = {
+                    WORLD: '🌍',
+                    PLAYER: '👤',
+                    DEATH: '💀',
+                    RESPAWN: '🔄',
+                    WEBSOCKET: '🔌',
+                    ERROR: '❌',
+                    FLEX: '🎮',
+                    STATE: '📊'
+                }[type] || '📝';
+                
+                console.log(`${emoji} [${type}]`, message, data);
             }
 
             start() {
-                console.log('🎮 [START] Starting game...');
-                
-                // Reset critical game state
-                this.deathType = null;
-                this.killerInfo = null;
-                this.dangerZone = {
-                    width: 1000,
-                    active: false,
-                    intensity: 0,
-                    falling: false,
-                    fallStartTime: 0,
-                    fallDuration: 2000
+                this.log('WORLD', 'Starting game...');
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.log('WEBSOCKET', 'Already connected, skipping connection');
+                    return;
+                }
+
+                this.ws = new WebSocket(this.serverUrl);
+                this.log('WEBSOCKET', 'Connecting to server...', { url: this.serverUrl });
+
+                this.ws.onopen = () => {
+                    this.log('WEBSOCKET', 'Connected to server');
+                    this.sendPlayerInfo();
                 };
 
-                // Clear any existing game loop
-                if (this.gameLoop) {
-                    console.log('🎮 [START] Clearing existing game loop');
-                    cancelAnimationFrame(this.gameLoop);
-                    this.gameLoop = null;
-                }
-                
-                // Clear any death effects
-                if (this.overlayCtx) {
-                    console.log('🎮 [START] Clearing overlay effects');
-                    this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-                }
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.log('WEBSOCKET', 'Received message', { type: data.type });
 
-                // Hide death screen if it's showing
-                if (this.gameOverScreen) {
-                    console.log('🎮 [START] Hiding game over screen');
-                    this.gameOverScreen.style.display = 'none';
-                }
-                
-                // Connect to WebSocket server
-                console.log('🎮 [START] Connecting to server...');
-                this.connectToServer();
-                
-                // Show game UI
-                document.getElementById('leaderboard').style.display = 'block';
-                document.getElementById('score').style.display = 'none';
-                
-                console.log('🎮 [START] UI updated');
-                
-                // Start game loop
-                console.log('🎮 [START] Starting game loop');
-                this.lastTime = 0; // Reset time tracking
-                this.gameLoop = requestAnimationFrame(time => this.update(time));
+                    switch (data.type) {
+                        case 'init':
+                            this.log('WORLD', 'Initializing game state', {
+                                playerId: data.playerId,
+                                playerCount: data.players.length,
+                                fishCount: data.fish.length
+                            });
+                            // ... rest of init code ...
+                            break;
+                        // ... other cases ...
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    this.log('WEBSOCKET', 'Disconnected from server');
+                };
+
+                this.ws.onerror = (error) => {
+                    this.log('ERROR', 'WebSocket error:', error);
+                };
             }
 
             connectToServer() {
@@ -422,6 +440,21 @@
                                         }
                                     }
                                 });
+                                break;
+
+                            case 'playerDied':
+                                const deadPlayer = this.players.get(data.playerId);
+                                if (deadPlayer) {
+                                    deadPlayer.state = this.playerStates.DEAD;
+                                    deadPlayer.deathType = data.deathType;
+                                    deadPlayer.killedBy = data.killedBy;
+                                }
+                                break;
+
+                            case 'playerRespawned':
+                                if (data.player) {
+                                    this.players.set(data.player.id, data.player);
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -757,390 +790,154 @@
                 });
                 
                 this.ctx.restore();
-
-                // Draw overlay effects after everything else
-                this.drawOverlayEffects();
             }
 
-            update(currentTime) {
-                const frameStart = performance.now();
-                
-                // Don't update if we're falling or dead
-                if (this.dangerZone.falling || this.deathType) {
-                    this.drawOverlayEffects();
-                    if (this.gameLoop) {
-                        cancelAnimationFrame(this.gameLoop);
-                        this.gameLoop = null;
-                    }
+            update(time) {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    this.log('ERROR', 'Update skipped - WebSocket not ready');
                     return;
                 }
 
-                if (!this.lastTime) this.lastTime = currentTime;
-                const deltaTime = currentTime - this.lastTime;
-                this.lastTime = currentTime;
+                // Calculate delta time
+                if (!this.lastTime) this.lastTime = time;
+                const deltaTime = time - this.lastTime;
+                this.lastTime = time;
 
-                if (this.playerId && this.players.has(this.playerId)) {
-                    this.updatePlayerPosition(deltaTime);
-                    this.checkCollisions();
-                }
-                
-                this.draw();
-                
-                // Only continue the game loop if we're not falling or dead
-                if (!this.dangerZone.falling && !this.deathType) {
-                    this.gameLoop = requestAnimationFrame(time => this.update(time));
-                }
-
-                // Update performance metrics
-                const frameEnd = performance.now();
-                this.metrics.frameTime = frameEnd - frameStart;
-                this.metrics.fps = 1000 / (currentTime - (this.lastTime || currentTime));
-            }
-
-            stop() {
-                if (this.gameLoop) {
-                    cancelAnimationFrame(this.gameLoop);
-                    this.gameLoop = null;
-                }
-            }
-
-            resizeCanvas() {
-                this.canvas.width = this.canvas.offsetWidth;
-                this.canvas.height = this.canvas.offsetHeight;
-                
-                // Update camera scale on resize
+                // Update player position if alive
                 const player = this.players.get(this.playerId);
-                if (player) {
-                    const basePlayerRadius = 20;
-                    const scaleFactor = basePlayerRadius / player.radius;
-                    this.camera.scale = Math.max(
-                        this.camera.minScale,
-                        Math.min(this.camera.maxScale, scaleFactor)
-                    );
-                }
-
-                // Resize overlay canvas
-                if (this.overlayCanvas) {
-                    this.overlayCanvas.width = this.canvas.width;
-                    this.overlayCanvas.height = this.canvas.height;
-                }
-            }
-
-            handleMouseMove(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                // Adjust mouse position based on camera scale
-                this.mouseX = (e.clientX - rect.left) / this.camera.scale;
-                this.mouseY = (e.clientY - rect.top) / this.camera.scale;
-            }
-
-            handleKeyDown(e) {
-                this.keys.add(e.key.toLowerCase());
-            }
-
-            handleKeyUp(e) {
-                this.keys.delete(e.key.toLowerCase());
-            }
-
-            startFalling() {
-                if (!this.dangerZone.falling) {
-                    console.log('🎮 [FALL] Player starting to fall');
-                    this.dangerZone.falling = true;
-                    this.dangerZone.fallStartTime = Date.now();
-                    this.deathType = 'fell';
-                    
-                    // Stop the game loop when falling starts
-                    if (this.gameLoop) {
-                        console.log('🎮 [FALL] Stopping game loop');
-                        cancelAnimationFrame(this.gameLoop);
-                        this.gameLoop = null;
-                    }
-                    
-                    // Hide leaderboard when falling starts
-                    document.getElementById('leaderboard').style.display = 'none';
-                }
-            }
-
-            respawnPlayer() {
-                console.log('🔄 [RESPAWN] Starting respawn process...');
-                
-                // First, stop everything
-                if (this.gameLoop) {
-                    console.log('🔄 [RESPAWN] Cancelling existing game loop');
-                    cancelAnimationFrame(this.gameLoop);
-                    this.gameLoop = null;
-                }
-
-                // Close existing connection
-                if (this.ws) {
-                    console.log('🔄 [RESPAWN] Closing existing WebSocket connection');
-                    this.ws.close();
-                    this.ws = null;
-                }
-
-                // Clear game state
-                console.log('🔄 [RESPAWN] Clearing game state');
-                this.players.clear();
-                this.fish.clear();
-                this.playerId = null;
-                this.deathType = null;
-                this.killerInfo = null;
-                this.dangerZone.falling = false;
-                this.dangerZone.intensity = 0;
-                this.dangerZone.active = false;
-
-                // Clear any death effects
-                if (this.overlayCtx) {
-                    console.log('🔄 [RESPAWN] Clearing overlay effects');
-                    this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-                }
-                
-                // Hide death screen, show game UI
-                console.log('🔄 [RESPAWN] Resetting UI');
-                this.gameOverScreen.style.display = 'none';
-                document.getElementById('leaderboard').style.display = 'block';
-
-                // Start fresh game
-                console.log('🔄 [RESPAWN] Starting fresh game');
-                this.start();
-            }
-
-            drawOverlayEffects() {
-                if (!this.overlayCtx || !this.overlayCanvas) return;
-                
-                this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-                
-                if (this.dangerZone.falling) {
-                    // Calculate fall progress
-                    const progress = Math.min(1, (Date.now() - this.dangerZone.fallStartTime) / this.dangerZone.fallDuration);
-                    
-                    // Create falling animation
-                    const alpha = Math.min(0.95, progress);
-                    this.overlayCtx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-                    this.overlayCtx.fillRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-                    
-                    // Show game over screen at animation end
-                    if (progress >= 1) {
-                        this.updateGameOverScreen();
-                        
-                        // Get player info and rank
-                        const player = this.players.get(this.playerId);
-                        if (player) {
-                            // Sort players to get rank
-                            const sortedPlayers = Array.from(this.players.values())
-                                .sort((a, b) => b.radius - a.radius);
-                            const rank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
-                            
-                            // Update final player info
-                            const finalRankEl = document.getElementById('final-rank');
-                            const finalAvatarEl = document.getElementById('final-avatar');
-                            const finalNameEl = document.getElementById('final-name');
-                            const finalScoreEl = document.getElementById('final-score');
-                            
-                            if (finalRankEl) finalRankEl.textContent = `${rank}.`;
-                            if (finalAvatarEl) {
-                                finalAvatarEl.src = player.avatar || '/icon.png?v=1';
-                                finalAvatarEl.alt = `${player.name}'s avatar`;
-                                finalAvatarEl.onerror = () => {
-                                    finalAvatarEl.src = '/icon.png?v=1';
-                                };
-                            }
-                            if (finalNameEl) finalNameEl.textContent = player.name;
-                            if (finalScoreEl) finalScoreEl.textContent = Math.round(player.radius);
-                        }
-                        this.gameOverScreen.style.display = 'block';
-                    }
-                } else if (this.dangerZone.active) {
-                    // Create danger zone vignette effect
-                    const gradient = this.overlayCtx.createRadialGradient(
-                        this.overlayCanvas.width / 2, this.overlayCanvas.height / 2,
-                        0,
-                        this.overlayCanvas.width / 2, this.overlayCanvas.height / 2,
-                        this.overlayCanvas.width / 2
-                    );
-                    
-                    gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
-                    gradient.addColorStop(0.7, `rgba(255, 0, 0, ${this.dangerZone.intensity * 0.2})`);
-                    gradient.addColorStop(1, `rgba(255, 0, 0, ${this.dangerZone.intensity * 0.4})`);
-                    
-                    this.overlayCtx.fillStyle = gradient;
-                    this.overlayCtx.fillRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
-                }
-            }
-
-            updateGameOverScreen() {
-                console.log('🎮 [GAMEOVER] Updating game over screen...');
-                console.log('Death type:', this.deathType);
-                console.log('Killer info:', this.killerInfo);
-                
-                // Stop the game loop when showing game over
-                if (this.gameLoop) {
-                    console.log('🎮 [GAMEOVER] Stopping game loop');
-                    cancelAnimationFrame(this.gameLoop);
-                    this.gameLoop = null;
-                }
-
-                const messages = {
-                    fell: {
-                        title: 'The Earth is Flat',
-                        subtitle: 'You fell off',
-                        emojis: '🫵 😂',
-                        shareText: `Flat Earthers were right! Made it to size {score} before falling off 🌍`
-                    },
-                    eaten: {
-                        title: 'Size Matters',
-                        subtitle: 'Better luck next time',
-                        emojis: '🤏 🐋',
-                        shareText: `@{killer} just swallowed me at size {score} in Whale Wars 🤏🐋`
-                    }
-                };
-
-                const msg = messages[this.deathType || 'fell'];
-                const player = this.players.get(this.playerId);
-                const score = player ? Math.round(player.radius) : 0;
-                
-                // Format share text
-                let shareText = msg.shareText
-                    .replace('{score}', score);
-                
-                if (this.deathType === 'eaten' && this.killerInfo) {
-                    shareText = shareText.replace('{killer}', this.killerInfo.name);
-                }
-                
-                this.gameOverScreen.innerHTML = `
-                    <div style="font-size: 64px; margin-bottom: 30px;">${msg.title}</div>
-                    <div style="font-size: 36px; margin-bottom: 20px;">${msg.subtitle}</div>
-                    <div style="font-size: 72px; margin-bottom: 30px;">${msg.emojis}</div>
-                    <div id="final-player-info" style="
-                        background: rgba(0, 0, 0, 0.7);
-                        padding: 12px;
-                        border-radius: 12px;
-                        margin: 20px auto;
-                        max-width: 300px;
-                        display: grid;
-                        grid-template-columns: 24px 32px auto 60px;
-                        align-items: center;
-                        gap: 8px;
-                        backdrop-filter: blur(5px);
-                    ">
-                        <div style="text-align: right; color: #aaa; font-size: 16px;" id="final-rank"></div>
-                        <img id="final-avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
-                        <div id="final-name" style="color: white; font-size: 16px; text-align: left;"></div>
-                        <div id="final-score" style="color: #6366f1; font-size: 16px; text-align: right;"></div>
-                    </div>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
-                        <button id="respawn-button" style="
-                            padding: 15px 30px;
-                            font-size: 24px;
-                            background: #6366f1;
-                            color: white;
-                            border: none;
-                            border-radius: 10px;
-                            cursor: pointer;
-                            font-family: inherit;
-                            transition: background 0.2s;
-                        ">Try Again</button>
-                        <button id="share-button" style="
-                            padding: 15px 30px;
-                            font-size: 24px;
-                            background: #10B981;
-                            color: white;
-                            border: none;
-                            border-radius: 10px;
-                            cursor: pointer;
-                            font-family: inherit;
-                            transition: background 0.2s;
-                        ">Flex</button>
-                    </div>
-                `;
-
-                // Add button listeners
-                document.getElementById('share-button')?.addEventListener('click', () => {
-                    console.log('🎮 [GAMEOVER] Share button clicked');
-                    this.shareGameOver();
-                });
-
-                document.getElementById('respawn-button')?.addEventListener('click', () => {
-                    console.log('🔄 [GAMEOVER] Respawn button clicked');
-                    this.respawnPlayer();
-                });
-
-                // Update final stats
-                const finalRankEl = document.getElementById('final-rank');
-                const finalAvatarEl = document.getElementById('final-avatar');
-                const finalNameEl = document.getElementById('final-name');
-                const finalScoreEl = document.getElementById('final-score');
-
-                if (player) {
-                    // Sort players to get rank
-                    const sortedPlayers = Array.from(this.players.values())
-                        .sort((a, b) => b.radius - a.radius);
-                    const rank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
-                    
-                    if (finalRankEl) finalRankEl.textContent = `${rank}.`;
-                    if (finalAvatarEl) {
-                        finalAvatarEl.src = player.avatar || '/icon.png';
-                        finalAvatarEl.alt = `${player.name}'s avatar`;
-                        finalAvatarEl.onerror = () => {
-                            finalAvatarEl.src = '/icon.png';
-                        };
-                    }
-                    if (finalNameEl) finalNameEl.textContent = player.name;
-                    if (finalScoreEl) finalScoreEl.textContent = Math.round(player.radius);
-                }
-
-                // Show the game over screen
-                this.gameOverScreen.style.display = 'block';
-            }
-
-            async shareGameOver() {
-                try {
-                    console.log('🎮 Attempting to share game over...');
-                    const player = this.players.get(this.playerId);
-                    if (!player) {
-                        console.error('❌ No player found for sharing');
-                        return;
-                    }
-
-                    const score = Math.round(player.radius);
-                    let shareText = '';
-
-                    if (player.deathType === 'fell') {
-                        shareText = `I fell off the edge of the Earth in Whale Wars 🌍\nScore: ${score}`;
-                    } else if (player.deathType === 'eaten' && player.killedBy) {
-                        shareText = `I was eaten by ${player.killedBy} in Whale Wars 🐋\nScore: ${score}`;
-                    } else {
-                        shareText = `Game Over in Whale Wars 🌊\nScore: ${score}`;
-                    }
-
-                    console.log('📝 Sharing with text:', shareText);
-                    
-                    // Use the Farcaster Frame SDK to share
-                    await sdk.actions.composeCast({
-                        text: shareText,
-                        embeds: [{
-                            url: 'https://whale-wars.onrender.com'
-                        }]
+                if (player && player.state === this.playerStates.ALIVE) {
+                    this.log('STATE', 'Updating player position', {
+                        id: this.playerId,
+                        position: { x: player.x, y: player.y },
+                        velocity: { x: player.velocityX, y: player.velocityY }
                     });
-                    console.log('✅ Share successful');
-                } catch (error) {
-                    console.error('❌ Error sharing:', error);
+
+                    // Update position based on velocity
+                    player.x += player.velocityX * deltaTime;
+                    player.y += player.velocityY * deltaTime;
+
+                    // Send position update to server
+                    this.ws.send(JSON.stringify({
+                        type: 'playerUpdate',
+                        x: player.x,
+                        y: player.y,
+                        velocityX: player.velocityX,
+                        velocityY: player.velocityY
+                    }));
+                }
+
+                // Update danger zone if active
+                if (this.dangerZone.active) {
+                    this.log('STATE', 'Danger zone active', {
+                        width: this.dangerZone.width,
+                        intensity: this.dangerZone.intensity,
+                        falling: this.dangerZone.falling
+                    });
+                    this.updateDangerZone(deltaTime);
+                }
+
+                // Render world
+                this.render();
+
+                // Continue game loop
+                this.gameLoop = requestAnimationFrame(time => this.update(time));
+            }
+
+            updateDangerZone(deltaTime) {
+                if (this.dangerZone.falling) {
+                    const elapsed = Date.now() - this.dangerZone.fallStartTime;
+                    const progress = Math.min(elapsed / this.dangerZone.fallDuration, 1);
+                    
+                    this.dangerZone.intensity = progress;
+                    this.log('STATE', 'Danger zone falling', {
+                        progress,
+                        intensity: this.dangerZone.intensity
+                    });
+
+                    if (progress >= 1) {
+                        this.log('STATE', 'Danger zone complete');
+                        this.dangerZone.falling = false;
+                        this.dangerZone.active = false;
+                    }
                 }
             }
 
-            handlePlayerEaten(killerPlayer) {
-                // Store killer info
-                this.killerInfo = {
-                    name: killerPlayer.name,
-                    id: killerPlayer.id
-                };
+            handleWebSocketMessage(event) {
+                const data = JSON.parse(event.data);
+                this.log('WEBSOCKET', 'Received message', { type: data.type });
+
+                switch (data.type) {
+                    case 'init':
+                        this.log('WORLD', 'Initializing game state', {
+                            playerId: data.playerId,
+                            playerCount: data.players.size,
+                            worldSize: data.worldSize
+                        });
+                        this.playerId = data.playerId;
+                        this.worldSize = data.worldSize;
+                        this.players = new Map(data.players);
+                        break;
+
+                    case 'playerJoined':
+                        this.log('PLAYER', 'New player joined', {
+                            id: data.player.id,
+                            name: data.player.name
+                        });
+                        this.players.set(data.player.id, data.player);
+                        break;
+
+                    case 'playerLeft':
+                        this.log('PLAYER', 'Player left', { id: data.playerId });
+                        this.players.delete(data.playerId);
+                        break;
+
+                    case 'playerUpdate':
+                        const player = this.players.get(data.playerId);
+                        if (player) {
+                            this.log('PLAYER', 'Updating player state', {
+                                id: data.playerId,
+                                position: { x: data.x, y: data.y }
+                            });
+                            Object.assign(player, data);
+                        }
+                        break;
+
+                    case 'dangerZone':
+                        this.log('WORLD', 'Danger zone update', {
+                            active: data.active,
+                            width: data.width
+                        });
+                        this.dangerZone = {
+                            ...this.dangerZone,
+                            ...data
+                        };
+                        break;
+
+                    default:
+                        this.log('ERROR', 'Unknown message type', { type: data.type });
+                }
+            }
+
+            shareGameOver() {
+                this.log('FLEX', 'Attempting to share game over');
                 
-                // Set death type and hide leaderboard
-                this.deathType = 'eaten';
-                document.getElementById('leaderboard').style.display = 'none';
-                
-                // Update and show game over screen
-                this.updateGameOverScreen();
-                this.gameOverScreen.style.display = 'block';
+                if (!window.sdk) {
+                    this.log('ERROR', 'Cannot share - SDK not available');
+                    return;
+                }
+
+                const player = this.players.get(this.playerId);
+                if (!player) {
+                    this.log('ERROR', 'Cannot share - Player not found');
+                    return;
+                }
+
+                const text = this.formatShareText(player.score);
+                this.log('FLEX', 'Sharing game over', { text });
+
+                window.sdk.actions.composeCast({ text })
+                    .then(() => this.log('FLEX', 'Successfully shared game over'))
+                    .catch(error => this.log('ERROR', 'Failed to share game over', { error }));
             }
 
             // Add method to handle avatar loading
