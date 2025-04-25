@@ -198,6 +198,63 @@
                     maxScale: 1
                 };
 
+                // Add danger zone properties
+                this.dangerZone = {
+                    width: 1000,  // Width of danger zone from edge
+                    active: false,
+                    intensity: 0,
+                    falling: false,
+                    fallStartTime: 0,
+                    fallDuration: 2000  // 2 seconds for fall animation
+                };
+
+                // Create overlay canvas for effects
+                this.overlayCanvas = document.createElement('canvas');
+                this.overlayCanvas.style.position = 'absolute';
+                this.style.top = '0';
+                this.style.left = '0';
+                this.style.width = '100%';
+                this.style.height = '100%';
+                this.style.pointerEvents = 'none';
+                document.getElementById('game-area').appendChild(this.overlayCanvas);
+                this.overlayCtx = this.overlayCanvas.getContext('2d');
+
+                // Create game over screen
+                this.gameOverScreen = document.createElement('div');
+                this.gameOverScreen.style.position = 'absolute';
+                this.gameOverScreen.style.top = '50%';
+                this.gameOverScreen.style.left = '50%';
+                this.gameOverScreen.style.transform = 'translate(-50%, -50%)';
+                this.gameOverScreen.style.textAlign = 'center';
+                this.gameOverScreen.style.color = 'white';
+                this.gameOverScreen.style.fontFamily = 'Comic Sans MS, cursive';
+                this.gameOverScreen.style.fontSize = '48px';
+                this.gameOverScreen.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+                this.gameOverScreen.style.display = 'none';
+                this.gameOverScreen.innerHTML = `
+                    <div style="font-size: 64px; margin-bottom: 30px;">The Earth is Flat</div>
+                    <div style="font-size: 36px; margin-bottom: 20px;">You fell off</div>
+                    <div style="font-size: 72px; margin-bottom: 30px;">🫵 😂</div>
+                    <button id="respawn-button" style="
+                        margin-top: 20px;
+                        padding: 15px 30px;
+                        font-size: 24px;
+                        background: #6366f1;
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-family: inherit;
+                        transition: background 0.2s;
+                    ">Try Again</button>
+                `;
+                document.getElementById('game-area').appendChild(this.gameOverScreen);
+
+                // Add respawn button listener
+                document.getElementById('respawn-button')?.addEventListener('click', () => {
+                    this.respawnPlayer();
+                });
+
                 // Initialize event listeners
                 window.addEventListener('mousemove', this.handleMouseMove.bind(this));
                 window.addEventListener('keydown', this.handleKeyDown.bind(this));
@@ -319,7 +376,7 @@
 
             updatePlayerPosition(deltaTime) {
                 const player = this.players.get(this.playerId);
-                if (!player) return;
+                if (!player || this.dangerZone.falling) return;
 
                 // More natural logarithmic camera scaling
                 const baseSize = 20;  // Starting size
@@ -362,6 +419,32 @@
                     const accelerationFactor = Math.min(1, distanceToTarget / (player.radius * 4));
                     dx = Math.cos(angle) * speed * accelerationFactor;
                     dy = Math.sin(angle) * speed * accelerationFactor;
+                }
+
+                // Check for danger zone
+                const margin = this.dangerZone.width;
+                const distanceToEdgeX = Math.min(
+                    player.x - player.radius,
+                    this.worldBounds.width - (player.x + player.radius)
+                );
+                const distanceToEdgeY = Math.min(
+                    player.y - player.radius,
+                    this.worldBounds.height - (player.y + player.radius)
+                );
+                const minDistance = Math.min(distanceToEdgeX, distanceToEdgeY);
+
+                if (minDistance < margin) {
+                    this.dangerZone.active = true;
+                    this.dangerZone.intensity = 1 - (minDistance / margin);
+                    
+                    // Start falling if player crosses boundary
+                    if (minDistance < -player.radius) {
+                        this.startFalling();
+                        return;
+                    }
+                } else {
+                    this.dangerZone.active = false;
+                    this.dangerZone.intensity = 0;
                 }
 
                 // Allow movement within bounds
@@ -558,6 +641,9 @@
                 });
                 
                 this.ctx.restore();
+
+                // Draw overlay effects after everything else
+                this.drawOverlayEffects();
             }
 
             update(currentTime) {
@@ -596,6 +682,12 @@
                         Math.min(this.camera.maxScale, scaleFactor)
                     );
                 }
+
+                // Resize overlay canvas
+                if (this.overlayCanvas) {
+                    this.overlayCanvas.width = this.canvas.width;
+                    this.overlayCanvas.height = this.canvas.height;
+                }
             }
 
             handleMouseMove(e) {
@@ -611,6 +703,77 @@
 
             handleKeyUp(e) {
                 this.keys.delete(e.key.toLowerCase());
+            }
+
+            startFalling() {
+                if (!this.dangerZone.falling) {
+                    this.dangerZone.falling = true;
+                    this.dangerZone.fallStartTime = Date.now();
+                    // Optional: Play falling sound effect
+                    // this.playFallingSound();
+                }
+            }
+
+            respawnPlayer() {
+                const player = this.players.get(this.playerId);
+                if (player) {
+                    // Reset player position to center
+                    player.x = this.worldBounds.width / 2;
+                    player.y = this.worldBounds.height / 2;
+                    player.radius = 20; // Reset size
+                    
+                    // Reset danger zone
+                    this.dangerZone.falling = false;
+                    this.dangerZone.intensity = 0;
+                    this.dangerZone.active = false;
+                    
+                    // Hide game over screen
+                    this.gameOverScreen.style.display = 'none';
+                    
+                    // Update server
+                    this.ws.send(JSON.stringify({
+                        type: 'updatePlayer',
+                        x: player.x,
+                        y: player.y,
+                        radius: player.radius
+                    }));
+                }
+            }
+
+            drawOverlayEffects() {
+                if (!this.overlayCtx || !this.overlayCanvas) return;
+                
+                this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                
+                if (this.dangerZone.falling) {
+                    // Calculate fall progress
+                    const progress = Math.min(1, (Date.now() - this.dangerZone.fallStartTime) / this.dangerZone.fallDuration);
+                    
+                    // Create falling animation
+                    const alpha = Math.min(0.95, progress);
+                    this.overlayCtx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                    this.overlayCtx.fillRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                    
+                    // Show game over screen at animation end
+                    if (progress >= 1) {
+                        this.gameOverScreen.style.display = 'block';
+                    }
+                } else if (this.dangerZone.active) {
+                    // Create danger zone vignette effect
+                    const gradient = this.overlayCtx.createRadialGradient(
+                        this.overlayCanvas.width / 2, this.overlayCanvas.height / 2,
+                        0,
+                        this.overlayCanvas.width / 2, this.overlayCanvas.height / 2,
+                        this.overlayCanvas.width / 2
+                    );
+                    
+                    gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
+                    gradient.addColorStop(0.7, `rgba(255, 0, 0, ${this.dangerZone.intensity * 0.2})`);
+                    gradient.addColorStop(1, `rgba(255, 0, 0, ${this.dangerZone.intensity * 0.4})`);
+                    
+                    this.overlayCtx.fillStyle = gradient;
+                    this.overlayCtx.fillRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                }
             }
         }
 
