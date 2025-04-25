@@ -142,19 +142,7 @@
                         Move with your mouse or WASD keys.<br>
                         Eat smaller fish to grow bigger!
                     </p>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button id="start-button" aria-label="Start Game">Start Game</button>
-                        <button id="add-button" style="
-                            background: #10B981;
-                            color: white;
-                            border: none;
-                            padding: 1rem 2rem;
-                            border-radius: 0.5rem;
-                            font-size: 1.2rem;
-                            cursor: pointer;
-                            transition: background 0.2s;
-                        ">Add to Warpcast</button>
-                    </div>
+                    <button id="start-button" aria-label="Start Game">Start Game</button>
                 </div>
             </div>
         </div>
@@ -1050,18 +1038,6 @@
                 document.getElementById('start-button').addEventListener('click', () => {
                     console.log('🎮 Game starting...');
                     game.start();
-                });
-
-                // Add listener for the add button
-                console.log('🎯 Adding add button listener...');
-                document.getElementById('add-button').addEventListener('click', async () => {
-                    try {
-                        console.log('➕ Adding game to Warpcast...');
-                        await sdk.actions.addFrame();
-                        console.log('✅ Game added to Warpcast successfully');
-                    } catch (error) {
-                        console.error('❌ Error adding game to Warpcast:', error);
-                    }
                 });
 
                 // Show UI
