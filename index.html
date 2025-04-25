@@ -288,6 +288,7 @@
                 const wsUrl = 'wss://whale-wars.onrender.com';
                 
                 if (this.ws) {
+                    console.log('Closing existing connection...');
                     this.ws.close();
                     this.ws = null;
                 }
@@ -760,40 +761,21 @@
 
             respawnPlayer() {
                 console.log('🔄 Attempting to respawn player...');
-                const player = this.players.get(this.playerId);
-                if (player) {
-                    console.log('Found player, resetting position and size...');
-                    // Reset player position to center
-                    player.x = this.worldBounds.width / 2;
-                    player.y = this.worldBounds.height / 2;
-                    player.radius = 20; // Reset size
-                    
-                    // Reset all death-related state
-                    this.dangerZone.falling = false;
-                    this.dangerZone.intensity = 0;
-                    this.dangerZone.active = false;
-                    this.deathType = null;
-                    this.killerInfo = null;
-                    
-                    // Hide game over screen and show leaderboard again
-                    this.gameOverScreen.style.display = 'none';
-                    document.getElementById('leaderboard').style.display = 'block';
-                    
-                    console.log('Sending respawn update to server...');
-                    // Update server
-                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                        this.ws.send(JSON.stringify({
-                            type: 'updatePlayer',
-                            x: player.x,
-                            y: player.y,
-                            radius: player.radius
-                        }));
-                    } else {
-                        console.error('❌ WebSocket not ready, cannot send respawn update');
-                    }
-                } else {
-                    console.error('❌ Could not find player to respawn');
-                }
+                
+                // Reset game state
+                this.dangerZone.falling = false;
+                this.dangerZone.intensity = 0;
+                this.dangerZone.active = false;
+                this.deathType = null;
+                this.killerInfo = null;
+                
+                // Hide game over screen and show leaderboard
+                this.gameOverScreen.style.display = 'none';
+                document.getElementById('leaderboard').style.display = 'block';
+
+                // Reconnect to server to get fresh game state
+                console.log('🔄 Reconnecting to server...');
+                this.connectToServer();
             }
 
             drawOverlayEffects() {
