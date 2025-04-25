@@ -21,25 +21,64 @@
             flex-direction: column;
             cursor: none;
         }
-        #player-info {
-            padding: 1rem;
-            background-color: rgba(255, 255, 255, 0.9);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            border-bottom: 1px solid #eee;
+        #leaderboard {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            z-index: 1000;
+            min-width: 200px;
+            backdrop-filter: blur(5px);
         }
-        #player-avatar {
-            width: 40px;
-            height: 40px;
+        #leaderboard h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            text-align: center;
+            color: #fff;
+            font-weight: 600;
+        }
+        .player-entry {
+            display: grid;
+            grid-template-columns: 24px 32px auto 40px;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 14px;
+        }
+        .player-entry.current-player {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin: 0 -8px;
+        }
+        .player-entry .rank {
+            text-align: right;
+            color: #aaa;
+        }
+        .player-entry .avatar {
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
-            border: 2px solid #6366f1;
             object-fit: cover;
         }
-        #player-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #1f2937;
+        .player-entry .name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .player-entry .score {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .divider {
+            text-align: center;
+            color: #666;
+            padding: 4px 0;
+            font-size: 12px;
         }
         #game-area {
             flex-grow: 1;
@@ -89,11 +128,11 @@
 </head>
 <body>
     <div id="game-container" role="application" aria-label="Whale Wars Game">
-        <div id="player-info" role="region" aria-label="Player Information">
-            <img id="player-avatar" src="/icon.png" alt="Player Avatar">
-            <div id="player-name" aria-live="polite">Loading...</div>
-        </div>
         <div id="game-area" role="main">
+            <div id="leaderboard">
+                <h3>Leaderboard</h3>
+                <div id="leaderboard-entries"></div>
+            </div>
             <canvas id="game-canvas"></canvas>
             <div id="score" role="status" aria-live="polite">Size: 20</div>
             <div id="start-screen">
@@ -135,6 +174,10 @@
                     avatar: user?.pfpUrl || '/icon.png'
                 };
                 console.log('🎮 Game constructed with player info:', this.playerInfo);
+                
+                // Initialize leaderboard
+                this.leaderboardEl = document.getElementById('leaderboard-entries');
+                this.updateLeaderboard();
                 
                 // Camera/viewport
                 this.camera = {
@@ -330,8 +373,79 @@
                 });
             }
 
+            updateLeaderboard() {
+                // Sort players by size
+                const sortedPlayers = Array.from(this.players.values())
+                    .sort((a, b) => b.radius - a.radius);
+                
+                // Find current player's rank
+                const currentPlayerRank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
+                
+                // Get top 5 players
+                const topPlayers = sortedPlayers.slice(0, 5);
+                
+                // Clear current leaderboard
+                this.leaderboardEl.innerHTML = '';
+                
+                // Add top 5 players
+                topPlayers.forEach((player, index) => {
+                    const isCurrentPlayer = player.id === this.playerId;
+                    this.addLeaderboardEntry(index + 1, player, isCurrentPlayer);
+                });
+                
+                // If current player is not in top 5, add them at their position
+                if (currentPlayerRank > 5 && this.playerId) {
+                    const currentPlayer = this.players.get(this.playerId);
+                    if (currentPlayer) {
+                        // Add divider
+                        const divider = document.createElement('div');
+                        divider.className = 'divider';
+                        divider.textContent = '...';
+                        this.leaderboardEl.appendChild(divider);
+                        
+                        // Add current player's entry
+                        this.addLeaderboardEntry(currentPlayerRank, currentPlayer, true);
+                    }
+                }
+            }
+
+            addLeaderboardEntry(rank, player, isCurrentPlayer) {
+                const entry = document.createElement('div');
+                entry.className = `player-entry${isCurrentPlayer ? ' current-player' : ''}`;
+                
+                const rankEl = document.createElement('div');
+                rankEl.className = 'rank';
+                rankEl.textContent = `${rank}.`;
+                
+                const avatarEl = document.createElement('img');
+                avatarEl.className = 'avatar';
+                avatarEl.src = player.avatar || '/icon.png';
+                avatarEl.alt = `${player.name}'s avatar`;
+                avatarEl.onerror = () => {
+                    avatarEl.src = '/icon.png';
+                };
+                
+                const nameEl = document.createElement('div');
+                nameEl.className = 'name';
+                nameEl.textContent = player.name;
+                
+                const scoreEl = document.createElement('div');
+                scoreEl.className = 'score';
+                scoreEl.textContent = Math.round(player.radius);
+                
+                entry.appendChild(rankEl);
+                entry.appendChild(avatarEl);
+                entry.appendChild(nameEl);
+                entry.appendChild(scoreEl);
+                
+                this.leaderboardEl.appendChild(entry);
+            }
+
             draw() {
                 if (!this.ctx || !this.canvas) return;
+                
+                // Update leaderboard
+                this.updateLeaderboard();
                 
                 // Clear canvas with background
                 this.ctx.fillStyle = '#87CEEB';
@@ -443,7 +557,7 @@
             console.log('📱 Hiding initial UI elements...');
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('score').style.display = 'none';
-            document.getElementById('player-info').style.display = 'none';
+            document.getElementById('leaderboard').style.display = 'none';
 
             try {
                 // Try to get Mini App context to detect environment
@@ -516,7 +630,7 @@
 
                 // Show UI
                 console.log('🎨 Showing game UI...');
-                document.getElementById('player-info').style.display = 'flex';
+                document.getElementById('leaderboard').style.display = 'block';
                 document.getElementById('start-screen').style.display = 'block';
 
                 // If in Mini App, hide splash screen
@@ -532,7 +646,7 @@
                 // Show error state
                 const playerName = document.getElementById('player-name');
                 playerName.textContent = 'Error loading game';
-                document.getElementById('player-info').style.display = 'flex';
+                document.getElementById('leaderboard').style.display = 'block';
                 
                 // If in Mini App, still hide splash screen
                 try {
