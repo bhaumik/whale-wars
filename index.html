@@ -184,8 +184,8 @@
                 
                 // World bounds
                 this.worldBounds = {
-                    width: 8000,
-                    height: 8000
+                    width: 12000,
+                    height: 12000
                 };
 
                 // Camera/viewport
@@ -194,9 +194,9 @@
                     y: 0,
                     scale: 1,
                     baseScale: 1,
-                    minScale: 0.3,
+                    minScale: 0.2,  // Allow slightly more zoom out
                     maxScale: 1,
-                    zoomThreshold: 40  // Only start zooming out after reaching this size
+                    zoomThreshold: 40
                 };
 
                 // Initialize event listeners
@@ -322,23 +322,23 @@
                 const player = this.players.get(this.playerId);
                 if (!player) return;
 
-                // Update camera scale based on player size
-                const basePlayerRadius = 20;
+                // More natural logarithmic camera scaling
+                const baseSize = 20;  // Starting size
                 let targetScale = 1;
                 
-                if (player.radius > this.camera.zoomThreshold) {
-                    // Calculate how much bigger than threshold we are
-                    const growthFactor = (player.radius - this.camera.zoomThreshold) / 100;
-                    // More gradual scale reduction
-                    targetScale = 1 / (1 + growthFactor);
-                    // Clamp between min and max scale
+                if (player.radius > baseSize) {
+                    // Logarithmic scaling formula similar to Agar.io
+                    targetScale = 1 / (1 + Math.log10(player.radius / baseSize));
                     targetScale = Math.max(this.camera.minScale, Math.min(this.camera.maxScale, targetScale));
                 }
                 
-                // Smooth transition to target scale (5% per frame)
-                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.05;
+                // Smooth transition (1% per frame for very smooth scaling)
+                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.01;
 
-                const speed = 5 * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
+                // Adjust speed based on size logarithmically
+                const baseSpeed = 5;
+                const speedFactor = 1 / Math.log10(Math.max(10, player.radius / 10));
+                const speed = baseSpeed * speedFactor * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
                 let dx = 0;
                 let dy = 0;
 
@@ -385,8 +385,19 @@
 
                     if (distance < player.radius + fish.radius) {
                         if (player.radius > fish.radius * 1.1) {
-                            // Player eats fish
-                            player.radius += fish.radius * 0.1;
+                            // Calculate areas
+                            const playerArea = Math.PI * player.radius * player.radius;
+                            const fishArea = Math.PI * fish.radius * fish.radius;
+                            
+                            // Growth factor decreases as player gets bigger
+                            const growthFactor = 0.5 / Math.log10(Math.max(10, player.radius));
+                            
+                            // New area based on absorbed fish
+                            const newArea = playerArea + (fishArea * growthFactor);
+                            
+                            // Convert back to radius
+                            player.radius = Math.sqrt(newArea / Math.PI);
+                            
                             this.ws.send(JSON.stringify({
                                 type: 'fishEaten',
                                 fishId: fishId
