@@ -113,7 +113,7 @@
         import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
         
         class Game {
-            constructor(canvas) {
+            constructor(canvas, user) {
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
                 this.gameLoop = null;
@@ -126,6 +126,7 @@
                 this.keys = new Set();
                 this.ws = null;
                 this.reconnectAttempts = 0;
+                this.user = user;
                 
                 // Camera/viewport
                 this.camera = {
@@ -179,13 +180,14 @@
                     console.log('Connected to server');
                     this.reconnectAttempts = 0;
                     
-                    // Send player info if available
-                    if (window.farcasterUser) {
+                    // Send player info if we have a user
+                    if (this.user?.fid) {
+                        console.log('Sending player info:', this.user);
                         this.ws.send(JSON.stringify({
                             type: 'playerInfo',
-                            name: window.farcasterUser.displayName || window.farcasterUser.username || `Player #${window.farcasterUser.fid}`,
-                            fid: window.farcasterUser.fid,
-                            avatar: window.farcasterUser.pfpUrl
+                            name: this.user.displayName || this.user.username || `Player #${this.user.fid}`,
+                            fid: this.user.fid,
+                            avatar: this.user.pfpUrl || null
                         }));
                     }
                 };
@@ -426,31 +428,27 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // Get user info from Farcaster context first
+                // Get Mini App context
                 const context = await sdk.context;
+                console.log('Mini App context:', context);
                 
-                // Update player info if available
-                if (context && context.user) {
-                    const playerAvatar = document.getElementById('player-avatar');
-                    const playerName = document.getElementById('player-name');
-                    
-                    // Store Farcaster user info globally for the WebSocket connection
-                    window.farcasterUser = context.user;
-                    
-                    // Only update pfp if it exists
+                // Initialize game with user context
+                const canvas = document.getElementById('game-canvas');
+                const game = new Game(canvas, context.user);
+                
+                // Update player info display
+                const playerName = document.getElementById('player-name');
+                const playerAvatar = document.getElementById('player-avatar');
+                
+                if (context.user?.fid) {
+                    playerName.textContent = context.user.displayName || context.user.username || `Player #${context.user.fid}`;
                     if (context.user.pfpUrl) {
                         playerAvatar.src = context.user.pfpUrl;
                     }
-                    
-                    // Use fallbacks for display name
-                    playerName.textContent = context.user.displayName || 
-                                          context.user.username || 
-                                          `Player #${context.user.fid}`;
+                } else {
+                    console.log('No valid user context found');
+                    playerName.textContent = 'Anonymous Player';
                 }
-
-                // Initialize game
-                const canvas = document.getElementById('game-canvas');
-                const game = new Game(canvas);
 
                 // Set initial canvas size
                 game.resizeCanvas();
@@ -465,14 +463,12 @@
                 document.getElementById('start-screen').style.display = 'block';
                 document.getElementById('score').style.display = 'none';
 
-                // Now that everything is initialized, hide the splash screen and disable native gestures
-                // since we're using mouse controls for the game
+                // Hide splash screen and disable native gestures for game controls
                 await sdk.actions.ready({ disableNativeGestures: true });
                 
                 console.log('Game initialized successfully');
             } catch (e) {
                 console.error('Error initializing game:', e);
-                // Set fallback state on error
                 document.getElementById('player-name').textContent = 'Anonymous Player';
             }
         });
