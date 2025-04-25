@@ -194,8 +194,9 @@
                     y: 0,
                     scale: 1,
                     baseScale: 1,
-                    minScale: 0.25,  // Increased zoom out capability for larger map
-                    maxScale: 1
+                    minScale: 0.3,
+                    maxScale: 1,
+                    zoomThreshold: 40  // Only start zooming out after reaching this size
                 };
 
                 // Initialize event listeners
@@ -323,17 +324,21 @@
 
                 // Update camera scale based on player size
                 const basePlayerRadius = 20;
-                const scaleFactor = basePlayerRadius / player.radius;
-                // Smoother scale transition
-                const targetScale = Math.max(
-                    this.camera.minScale,
-                    Math.min(this.camera.maxScale, scaleFactor)
-                );
-                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.1;
+                let targetScale = 1;
+                
+                if (player.radius > this.camera.zoomThreshold) {
+                    // Calculate how much bigger than threshold we are
+                    const growthFactor = (player.radius - this.camera.zoomThreshold) / 100;
+                    // More gradual scale reduction
+                    targetScale = 1 / (1 + growthFactor);
+                    // Clamp between min and max scale
+                    targetScale = Math.max(this.camera.minScale, Math.min(this.camera.maxScale, targetScale));
+                }
+                
+                // Smooth transition to target scale (5% per frame)
+                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.05;
 
-                // Adjust base speed based on world size
-                const baseSpeed = 7;  // Increased base speed for larger map
-                const speed = baseSpeed * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
+                const speed = 5 * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
                 let dx = 0;
                 let dy = 0;
 
