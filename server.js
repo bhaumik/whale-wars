@@ -87,8 +87,8 @@ wss.on('connection', (ws) => {
     ws.playerId = playerId;
     console.log(`Player ${playerId} connected`);
 
-    // Initialize player
-    players.set(playerId, {
+    // Initialize player with default values
+    const defaultPlayer = {
         id: playerId,
         x: 2500,
         y: 2500,
@@ -97,7 +97,8 @@ wss.on('connection', (ws) => {
         name: 'Anonymous',
         fid: null,
         avatar: null
-    });
+    };
+    players.set(playerId, defaultPlayer);
 
     // Send initial game state
     ws.send(JSON.stringify({
@@ -112,7 +113,7 @@ wss.on('connection', (ws) => {
         if (client !== ws && client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
                 type: 'playerJoined',
-                player: players.get(playerId)
+                player: defaultPlayer
             }));
         }
     });
@@ -174,14 +175,14 @@ wss.on('connection', (ws) => {
                     const existingPlayer = players.get(playerId);
                     if (existingPlayer) {
                         Object.assign(existingPlayer, {
-                            name: data.name,
-                            fid: data.fid,
-                            avatar: data.avatar
+                            name: data.name || existingPlayer.name,
+                            fid: data.fid || existingPlayer.fid,
+                            avatar: data.avatar || existingPlayer.avatar
                         });
 
                         // Broadcast player info update
                         wss.clients.forEach((client) => {
-                            if (client !== ws && client.readyState === WebSocket.OPEN) {
+                            if (client.readyState === WebSocket.OPEN) {
                                 client.send(JSON.stringify({
                                     type: 'playerUpdated',
                                     player: existingPlayer

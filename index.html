@@ -179,11 +179,13 @@
                     console.log('Connected to server');
                     this.reconnectAttempts = 0;
                     
-                    // Request initial game state
-                    if (this.playerId) {
+                    // Send player info if available
+                    if (window.farcasterUser) {
                         this.ws.send(JSON.stringify({
-                            type: 'requestState',
-                            playerId: this.playerId
+                            type: 'playerInfo',
+                            name: window.farcasterUser.displayName || window.farcasterUser.username || `Player #${window.farcasterUser.fid}`,
+                            fid: window.farcasterUser.fid,
+                            avatar: window.farcasterUser.pfpUrl
                         }));
                     }
                 };
@@ -434,6 +436,9 @@
                 if (context && context.user) {
                     const playerAvatar = document.getElementById('player-avatar');
                     const playerName = document.getElementById('player-name');
+                    
+                    // Store Farcaster user info globally for the WebSocket connection
+                    window.farcasterUser = context.user;
                     
                     // Only update pfp if it exists
                     if (context.user.pfpUrl) {
