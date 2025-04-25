@@ -310,21 +310,14 @@
                     console.log('Connected to server');
                     this.reconnectAttempts = 0;
                     
-                    // Add a small delay to ensure the connection is fully established
-                    setTimeout(() => {
-                        // Send player info using stored info from constructor
-                        console.log('Sending stored player info:', this.playerInfo);
-                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                            this.ws.send(JSON.stringify({
-                                type: 'playerInfo',
-                                name: this.playerInfo.name,
-                                fid: this.playerInfo.fid,
-                                avatar: this.playerInfo.avatar
-                            }));
-                        } else {
-                            console.error('WebSocket not ready for sending player info');
-                        }
-                    }, 100);
+                    // Send player info using stored info from constructor
+                    console.log('Sending stored player info:', this.playerInfo);
+                    this.ws.send(JSON.stringify({
+                        type: 'playerInfo',
+                        name: this.playerInfo.name,
+                        fid: this.playerInfo.fid,
+                        avatar: this.playerInfo.avatar
+                    }));
                 };
 
                 this.ws.onmessage = (event) => {
@@ -1051,33 +1044,6 @@
                 // Set initial canvas size
                 console.log('📐 Setting canvas size...');
                 game.resizeCanvas();
-                
-                // TEMPORARY: Add fake players for leaderboard visualization
-                const fakePlayers = [
-                    { id: 'p1', name: '@whale_king', radius: 450, avatar: 'https://i.imgur.com/1.jpg' },
-                    { id: 'p2', name: '@bigfish', radius: 380, avatar: 'https://i.imgur.com/2.jpg' },
-                    { id: 'p3', name: '@oceanmaster', radius: 320, avatar: 'https://i.imgur.com/3.jpg' },
-                    { id: 'p4', name: '@deepblue', radius: 280, avatar: 'https://i.imgur.com/4.jpg' },
-                    { id: 'p5', name: '@seafarer', radius: 250, avatar: 'https://i.imgur.com/5.jpg' },
-                    { id: 'p6', name: '@tidechaser', radius: 220, avatar: 'https://i.imgur.com/6.jpg' },
-                    { id: 'p7', name: '@wavesurfer', radius: 180, avatar: 'https://i.imgur.com/7.jpg' },
-                    { id: 'p8', name: '@coralreef', radius: 150, avatar: 'https://i.imgur.com/8.jpg' },
-                    { id: 'p9', name: userContext?.username || '@you', radius: 120, avatar: userContext?.pfpUrl || '/icon.png' },
-                    { id: 'p10', name: '@plankton', radius: 80, avatar: 'https://i.imgur.com/10.jpg' }
-                ];
-                
-                // Add fake players to the game
-                fakePlayers.forEach(player => {
-                    game.players.set(player.id, {
-                        ...player,
-                        x: 0,
-                        y: 0,
-                        color: '#ff0000'
-                    });
-                });
-                
-                // Set the current player ID to be p9 (9th place)
-                game.playerId = 'p9';
                 
                 // Add start button listener
                 console.log('🎯 Adding start button listener...');
