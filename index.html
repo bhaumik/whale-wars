@@ -213,7 +213,7 @@
                 
                 // Show score and hide start screen
                 document.getElementById('start-screen').style.display = 'none';
-                document.getElementById('score').style.display = 'block';
+                document.getElementById('score').style.display = 'none';
                 document.getElementById('leaderboard').style.display = 'block';
                 
                 // Start game loop
@@ -506,10 +506,14 @@
                     if (player.name) {
                         this.ctx.fillStyle = 'white';
                         this.ctx.strokeStyle = 'black';
-                        this.ctx.lineWidth = 3;
-                        this.ctx.font = '14px Arial';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, Arial';
                         this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'bottom';
+                        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        this.ctx.shadowBlur = 2;
                         this.ctx.strokeText(player.name, player.x, player.y - player.radius - 5);
+                        this.ctx.shadowBlur = 0;
                         this.ctx.fillText(player.name, player.x, player.y - player.radius - 5);
                     }
                 });
@@ -610,13 +614,13 @@
                 document.getElementById('start-button').addEventListener('click', () => {
                     console.log('🎮 Game starting...');
                     game.start();
-                    document.getElementById('score').textContent = 'Size: 20';
                 });
 
                 // Show UI
                 console.log('🎨 Showing game UI...');
                 document.getElementById('leaderboard').style.display = 'block';
                 document.getElementById('start-screen').style.display = 'block';
+                document.getElementById('score').style.display = 'none';
 
                 // If in Mini App, hide splash screen
                 if (isMiniApp) {
