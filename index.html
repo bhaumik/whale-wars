@@ -437,8 +437,8 @@
                     this.dangerZone.active = true;
                     this.dangerZone.intensity = 1 - (minDistance / margin);
                     
-                    // Start falling if player crosses boundary
-                    if (minDistance < -player.radius) {
+                    // Start falling if player is completely beyond the boundary
+                    if (minDistance < -player.radius * 2) {
                         this.startFalling();
                         return;
                     }
@@ -447,9 +447,9 @@
                     this.dangerZone.intensity = 0;
                 }
 
-                // Allow movement within bounds
-                player.x = Math.max(player.radius, Math.min(this.worldBounds.width - player.radius, player.x + dx));
-                player.y = Math.max(player.radius, Math.min(this.worldBounds.height - player.radius, player.y + dy));
+                // Allow movement without bounds
+                player.x = player.x + dx;
+                player.y = player.y + dy;
 
                 // Update camera position with scaling
                 this.camera.x = player.x - (this.canvas.width / 2) / this.camera.scale;
