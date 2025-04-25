@@ -135,17 +135,6 @@
             </div>
             <canvas id="game-canvas"></canvas>
             <div id="score" role="status" aria-live="polite">Size: 20</div>
-            <div id="start-screen">
-                <h2 id="game-title">Whale Wars</h2>
-                <div role="dialog" aria-labelledby="game-title" aria-describedby="game-instructions">
-                    <p id="game-instructions">
-                        Eat smaller players, avoid larger players.<br>
-                        Yeet out mass to form alliances.<br>
-                        Inspired by Agar.io :)
-                    </p>
-                    <button id="start-button" aria-label="Start Game">Start Game</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1052,12 +1041,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🎮 Game initialization starting...');
             
-            // Hide UI initially
-            console.log('📱 Hiding initial UI elements...');
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('score').style.display = 'none';
-            document.getElementById('leaderboard').style.display = 'none';
-
             try {
                 // Try to get Mini App context to detect environment
                 console.log('🔍 Detecting environment...');
@@ -1090,29 +1073,22 @@
                 
                 const canvas = document.getElementById('game-canvas');
                 const game = new Game(canvas, userContext);
-                
+
                 // Set initial canvas size
                 console.log('📐 Setting canvas size...');
                 game.resizeCanvas();
-                
-                // Add start button listener
-                console.log('🎯 Adding start button listener...');
-                document.getElementById('start-button').addEventListener('click', () => {
-                    console.log('🎮 Game starting...');
-                    game.start();
-                });
 
-                // Show UI
+                // Show leaderboard
                 console.log('🎨 Showing game UI...');
                 document.getElementById('leaderboard').style.display = 'block';
-                document.getElementById('start-screen').style.display = 'block';
                 document.getElementById('score').style.display = 'none';
 
-                // If in Mini App, hide splash screen
+                // If in Mini App, hide splash screen and start game immediately
                 if (isMiniApp) {
-                    console.log('🚀 Calling Mini App ready...');
+                    console.log('🚀 Starting game automatically in Mini App...');
+                    game.start();
                     await sdk.actions.ready({ disableNativeGestures: true });
-                    console.log('✨ Mini App ready called successfully');
+                    console.log('✨ Mini App ready and game started');
                 }
                 
                 console.log('🎉 Game initialized successfully');
