@@ -208,6 +208,9 @@
                     fallDuration: 2000  // 2 seconds for fall animation
                 };
 
+                // Add death type tracking
+                this.deathType = null; // 'eaten' or 'fell'
+
                 // Create overlay canvas for effects
                 this.overlayCanvas = document.createElement('canvas');
                 this.overlayCanvas.style.position = 'absolute';
@@ -234,40 +237,7 @@
                 this.gameOverScreen.style.width = '100%';
                 this.gameOverScreen.style.maxWidth = '600px';
                 this.gameOverScreen.style.padding = '20px';
-                this.gameOverScreen.innerHTML = `
-                    <div style="font-size: 64px; margin-bottom: 30px;">The Earth is Flat</div>
-                    <div style="font-size: 36px; margin-bottom: 20px;">You fell off</div>
-                    <div style="font-size: 72px; margin-bottom: 30px;">🫵 😂</div>
-                    <div id="final-player-info" style="
-                        background: rgba(0, 0, 0, 0.7);
-                        padding: 12px;
-                        border-radius: 12px;
-                        margin: 20px auto;
-                        max-width: 300px;
-                        display: grid;
-                        grid-template-columns: 24px 32px auto 60px;
-                        align-items: center;
-                        gap: 8px;
-                        backdrop-filter: blur(5px);
-                    ">
-                        <div style="text-align: right; color: #aaa; font-size: 16px;" id="final-rank"></div>
-                        <img id="final-avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
-                        <div id="final-name" style="color: white; font-size: 16px; text-align: left;"></div>
-                        <div id="final-score" style="color: #6366f1; font-size: 16px; text-align: right;"></div>
-                    </div>
-                    <button id="respawn-button" style="
-                        margin-top: 20px;
-                        padding: 15px 30px;
-                        font-size: 24px;
-                        background: #6366f1;
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        cursor: pointer;
-                        font-family: inherit;
-                        transition: background 0.2s;
-                    ">Try Again</button>
-                `;
+                this.updateGameOverScreen();
                 document.getElementById('game-area').appendChild(this.gameOverScreen);
 
                 // Add respawn button listener
@@ -784,6 +754,7 @@
                 if (!this.dangerZone.falling) {
                     this.dangerZone.falling = true;
                     this.dangerZone.fallStartTime = Date.now();
+                    this.deathType = 'fell';
                     
                     // Hide leaderboard when falling starts
                     document.getElementById('leaderboard').style.display = 'none';
@@ -798,10 +769,11 @@
                     player.y = this.worldBounds.height / 2;
                     player.radius = 20; // Reset size
                     
-                    // Reset danger zone
+                    // Reset danger zone and death type
                     this.dangerZone.falling = false;
                     this.dangerZone.intensity = 0;
                     this.dangerZone.active = false;
+                    this.deathType = null;
                     
                     // Hide game over screen and show leaderboard again
                     this.gameOverScreen.style.display = 'none';
@@ -833,6 +805,8 @@
                     
                     // Show game over screen at animation end
                     if (progress >= 1) {
+                        this.updateGameOverScreen();
+                        
                         // Get player info and rank
                         const player = this.players.get(this.playerId);
                         if (player) {
@@ -876,6 +850,58 @@
                     this.overlayCtx.fillStyle = gradient;
                     this.overlayCtx.fillRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
                 }
+            }
+
+            updateGameOverScreen() {
+                const messages = {
+                    fell: {
+                        title: 'The Earth is Flat',
+                        subtitle: 'You fell off',
+                        emojis: '🫵 😂'
+                    },
+                    eaten: {
+                        title: 'Nom Nom Nom',
+                        subtitle: 'You got eaten',
+                        emojis: '🍽️ 🐋'
+                    }
+                };
+
+                const msg = messages[this.deathType || 'fell'];
+                
+                this.gameOverScreen.innerHTML = `
+                    <div style="font-size: 64px; margin-bottom: 30px;">${msg.title}</div>
+                    <div style="font-size: 36px; margin-bottom: 20px;">${msg.subtitle}</div>
+                    <div style="font-size: 72px; margin-bottom: 30px;">${msg.emojis}</div>
+                    <div id="final-player-info" style="
+                        background: rgba(0, 0, 0, 0.7);
+                        padding: 12px;
+                        border-radius: 12px;
+                        margin: 20px auto;
+                        max-width: 300px;
+                        display: grid;
+                        grid-template-columns: 24px 32px auto 60px;
+                        align-items: center;
+                        gap: 8px;
+                        backdrop-filter: blur(5px);
+                    ">
+                        <div style="text-align: right; color: #aaa; font-size: 16px;" id="final-rank"></div>
+                        <img id="final-avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+                        <div id="final-name" style="color: white; font-size: 16px; text-align: left;"></div>
+                        <div id="final-score" style="color: #6366f1; font-size: 16px; text-align: right;"></div>
+                    </div>
+                    <button id="respawn-button" style="
+                        margin-top: 20px;
+                        padding: 15px 30px;
+                        font-size: 24px;
+                        background: #6366f1;
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-family: inherit;
+                        transition: background 0.2s;
+                    ">Try Again</button>
+                `;
             }
 
             // Add method to handle avatar loading
