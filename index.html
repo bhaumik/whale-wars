@@ -427,49 +427,111 @@
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🎮 Game initialization starting...');
+            
+            // Hide UI initially
+            console.log('📱 Hiding initial UI elements...');
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('score').style.display = 'none';
+            document.getElementById('player-info').style.display = 'none';
+
             try {
-                // Get Mini App context
-                const context = await sdk.context;
-                console.log('Mini App context:', context);
+                // Try to get Mini App context to detect environment
+                console.log('🔍 Detecting environment...');
+                let userContext = null;
+                let isMiniApp = false;
+
+                try {
+                    console.log('⚡️ Attempting to get Mini App context...');
+                    const context = await sdk.context;
+                    console.log('✅ Running in Mini App environment:', {
+                        clientFid: context.client?.clientFid,
+                        userFid: context.user?.fid,
+                        username: context.user?.username,
+                        displayName: context.user?.displayName,
+                        hasPfp: !!context.user?.pfpUrl
+                    });
+                    isMiniApp = true;
+                    userContext = context.user;
+                } catch (e) {
+                    console.log('🌐 Running in standalone web environment', e);
+                    isMiniApp = false;
+                }
+
+                // Initialize game based on environment
+                console.log('🎲 Initializing game with context:', {
+                    isMiniApp,
+                    hasUserContext: !!userContext,
+                    userFid: userContext?.fid
+                });
                 
-                // Initialize game with user context
                 const canvas = document.getElementById('game-canvas');
-                const game = new Game(canvas, context.user);
+                const game = new Game(canvas, userContext);
                 
                 // Update player info display
+                console.log('👤 Updating player display...');
                 const playerName = document.getElementById('player-name');
                 const playerAvatar = document.getElementById('player-avatar');
                 
-                if (context.user?.fid) {
-                    playerName.textContent = context.user.displayName || context.user.username || `Player #${context.user.fid}`;
-                    if (context.user.pfpUrl) {
-                        playerAvatar.src = context.user.pfpUrl;
+                if (isMiniApp && userContext?.fid) {
+                    console.log('🎭 Setting Mini App user display:', {
+                        displayName: userContext.displayName,
+                        username: userContext.username,
+                        fid: userContext.fid
+                    });
+                    // In Mini App with valid user context
+                    playerName.textContent = userContext.displayName || userContext.username || `Player #${userContext.fid}`;
+                    if (userContext.pfpUrl) {
+                        console.log('🖼 Setting user profile picture:', userContext.pfpUrl);
+                        playerAvatar.src = userContext.pfpUrl;
                     }
                 } else {
-                    console.log('No valid user context found');
-                    playerName.textContent = 'Anonymous Player';
+                    console.log('👾 Setting anonymous user display');
+                    // In standalone web or no valid user context
+                    playerName.textContent = 'Anonymous';
+                    playerAvatar.src = '/icon.png';
                 }
 
                 // Set initial canvas size
+                console.log('📐 Setting canvas size...');
                 game.resizeCanvas();
                 
                 // Add start button listener
+                console.log('🎯 Adding start button listener...');
                 document.getElementById('start-button').addEventListener('click', () => {
+                    console.log('🎮 Game starting...');
                     game.start();
                     document.getElementById('score').textContent = 'Size: 20';
                 });
 
-                // Show start screen
+                // Show UI
+                console.log('🎨 Showing game UI...');
+                document.getElementById('player-info').style.display = 'flex';
                 document.getElementById('start-screen').style.display = 'block';
-                document.getElementById('score').style.display = 'none';
 
-                // Hide splash screen and disable native gestures for game controls
-                await sdk.actions.ready({ disableNativeGestures: true });
+                // If in Mini App, hide splash screen
+                if (isMiniApp) {
+                    console.log('🚀 Calling Mini App ready...');
+                    await sdk.actions.ready({ disableNativeGestures: true });
+                    console.log('✨ Mini App ready called successfully');
+                }
                 
-                console.log('Game initialized successfully');
+                console.log('🎉 Game initialized successfully');
             } catch (e) {
-                console.error('Error initializing game:', e);
-                document.getElementById('player-name').textContent = 'Anonymous Player';
+                console.error('❌ Error initializing game:', e);
+                // Show error state
+                const playerName = document.getElementById('player-name');
+                playerName.textContent = 'Error loading game';
+                document.getElementById('player-info').style.display = 'flex';
+                
+                // If in Mini App, still hide splash screen
+                try {
+                    console.log('🔄 Attempting to hide splash screen in error state...');
+                    await sdk.actions.ready();
+                    console.log('✅ Splash screen hidden in error state');
+                } catch (e) {
+                    console.log('ℹ️ Not in Mini App environment, ignoring splash screen');
+                }
             }
         });
     </script>
