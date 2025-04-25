@@ -2,9 +2,18 @@ const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: ['https://whale-wars.vercel.app', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
+
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 const port = process.env.PORT || 8080;
 

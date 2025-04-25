@@ -166,7 +166,7 @@
 
             connectToServer() {
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
+                const wsUrl = 'wss://whale-wars.onrender.com';
                 
                 if (this.ws) {
                     this.ws.close();
