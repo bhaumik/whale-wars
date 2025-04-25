@@ -261,11 +261,42 @@
             start() {
                 console.log('🎮 [START] Starting game...');
                 
-                // Connect to WebSocket server first
+                // Reset critical game state
+                this.deathType = null;
+                this.killerInfo = null;
+                this.dangerZone = {
+                    width: 1000,
+                    active: false,
+                    intensity: 0,
+                    falling: false,
+                    fallStartTime: 0,
+                    fallDuration: 2000
+                };
+
+                // Clear any existing game loop
+                if (this.gameLoop) {
+                    console.log('🎮 [START] Clearing existing game loop');
+                    cancelAnimationFrame(this.gameLoop);
+                    this.gameLoop = null;
+                }
+                
+                // Clear any death effects
+                if (this.overlayCtx) {
+                    console.log('🎮 [START] Clearing overlay effects');
+                    this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                }
+
+                // Hide death screen if it's showing
+                if (this.gameOverScreen) {
+                    console.log('🎮 [START] Hiding game over screen');
+                    this.gameOverScreen.style.display = 'none';
+                }
+                
+                // Connect to WebSocket server
                 console.log('🎮 [START] Connecting to server...');
                 this.connectToServer();
                 
-                // Show leaderboard
+                // Show game UI
                 document.getElementById('leaderboard').style.display = 'block';
                 document.getElementById('score').style.display = 'none';
                 
@@ -273,6 +304,7 @@
                 
                 // Start game loop
                 console.log('🎮 [START] Starting game loop');
+                this.lastTime = 0; // Reset time tracking
                 this.gameLoop = requestAnimationFrame(time => this.update(time));
             }
 
@@ -684,6 +716,10 @@
                 // Don't update if we're falling or dead
                 if (this.dangerZone.falling || this.deathType) {
                     this.drawOverlayEffects();
+                    if (this.gameLoop) {
+                        cancelAnimationFrame(this.gameLoop);
+                        this.gameLoop = null;
+                    }
                     return;
                 }
 
