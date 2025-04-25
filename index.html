@@ -759,8 +759,10 @@
             }
 
             respawnPlayer() {
+                console.log('🔄 Attempting to respawn player...');
                 const player = this.players.get(this.playerId);
                 if (player) {
+                    console.log('Found player, resetting position and size...');
                     // Reset player position to center
                     player.x = this.worldBounds.width / 2;
                     player.y = this.worldBounds.height / 2;
@@ -777,13 +779,20 @@
                     this.gameOverScreen.style.display = 'none';
                     document.getElementById('leaderboard').style.display = 'block';
                     
+                    console.log('Sending respawn update to server...');
                     // Update server
-                    this.ws.send(JSON.stringify({
-                        type: 'updatePlayer',
-                        x: player.x,
-                        y: player.y,
-                        radius: player.radius
-                    }));
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: 'updatePlayer',
+                            x: player.x,
+                            y: player.y,
+                            radius: player.radius
+                        }));
+                    } else {
+                        console.error('❌ WebSocket not ready, cannot send respawn update');
+                    }
+                } else {
+                    console.error('❌ Could not find player to respawn');
                 }
             }
 
@@ -851,6 +860,9 @@
             }
 
             updateGameOverScreen() {
+                console.log('🎮 Updating game over screen...');
+                console.log('Death type:', this.deathType);
+                console.log('Killer info:', this.killerInfo);
                 const messages = {
                     fell: {
                         title: 'The Earth is Flat',
@@ -925,23 +937,51 @@
                     </div>
                 `;
 
+                // Add share button listener
+                document.getElementById('share-button')?.addEventListener('click', () => {
+                    console.log('🎮 Share button clicked');
+                    this.shareGameOver();
+                });
+
                 // Add respawn button listener
                 document.getElementById('respawn-button')?.addEventListener('click', () => {
+                    console.log('🔄 Respawn button clicked');
                     this.respawnPlayer();
                 });
             }
 
-            async shareGameOver(text) {
+            async shareGameOver() {
                 try {
+                    console.log('🎮 Attempting to share game over...');
+                    const player = this.players.get(this.playerId);
+                    if (!player) {
+                        console.error('❌ No player found for sharing');
+                        return;
+                    }
+
+                    const score = Math.round(player.radius);
+                    let shareText = '';
+
+                    if (player.deathType === 'fell') {
+                        shareText = `I fell off the edge of the Earth in Whale Wars 🌍\nScore: ${score}`;
+                    } else if (player.deathType === 'eaten' && player.killedBy) {
+                        shareText = `I was eaten by ${player.killedBy} in Whale Wars 🐋\nScore: ${score}`;
+                    } else {
+                        shareText = `Game Over in Whale Wars 🌊\nScore: ${score}`;
+                    }
+
+                    console.log('📝 Sharing with text:', shareText);
+                    
                     // Use the Farcaster Frame SDK to share
-                    await sdk.actions.cast({
-                        text: text,
+                    await sdk.actions.composeCast({
+                        text: shareText,
                         embeds: [{
                             url: 'https://whale-wars.onrender.com'
                         }]
                     });
+                    console.log('✅ Share successful');
                 } catch (error) {
-                    console.error('Error sharing:', error);
+                    console.error('❌ Error sharing:', error);
                 }
             }
 
