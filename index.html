@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whale Wars</title>
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://whale-wars.vercel.app/preview.png","button":{"title":"Play","action":{"type":"launch_frame","name":"Whale Wars","url":"https://whale-wars.vercel.app","splashImageUrl":"https://whale-wars.vercel.app/icon.png","splashBackgroundColor":"#f5f5f5"}}}' />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            cursor: none;
+        }
+        #player-info {
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        #player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #6366f1;
+            object-fit: cover;
+        }
+        #player-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        #game-area {
+            flex-grow: 1;
+            position: relative;
+            background: linear-gradient(180deg, #87CEEB 0%, #1E90FF 100%);
+            overflow: hidden;
+        }
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        #score {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.9rem;
+        }
+        #start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #start-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #start-button:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container" role="application" aria-label="Whale Wars Game">
+        <div id="player-info" role="region" aria-label="Player Information">
+            <img id="player-avatar" src="/icon.png" alt="Player Avatar">
+            <div id="player-name" aria-live="polite">Loading...</div>
+        </div>
+        <div id="game-area" role="main">
+            <canvas id="game-canvas"></canvas>
+            <div id="score" role="status" aria-live="polite">Size: 20</div>
+            <div id="start-screen">
+                <h2 id="game-title">Whale Wars</h2>
+                <div role="dialog" aria-labelledby="game-title" aria-describedby="game-instructions">
+                    <p id="game-instructions">
+                        Move with your mouse or WASD keys.<br>
+                        Eat smaller fish to grow bigger!
+                    </p>
+                    <button id="start-button" aria-label="Start Game">Start Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+        
+        class Game {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.gameLoop = null;
+                this.lastTime = 0;
+                this.fish = new Map();
+                this.players = new Map();
+                this.playerId = null;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                this.keys = new Set();
+                this.ws = null;
+                this.reconnectAttempts = 0;
+                
+                // Camera/viewport
+                this.camera = {
+                    x: 0,
+                    y: 0,
+                    scale: 1
+                };
+
+                // World bounds
+                this.worldBounds = {
+                    width: 5000,
+                    height: 5000
+                };
+
+                // Initialize event listeners
+                window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+                window.addEventListener('keydown', this.handleKeyDown.bind(this));
+                window.addEventListener('keyup', this.handleKeyUp.bind(this));
+
+                // Resize handler
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            start() {
+                if (this.gameLoop) return;
+                
+                // Connect to WebSocket server
+                this.connectToServer();
+                
+                // Show score and hide start screen
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('score').style.display = 'block';
+                
+                // Start game loop
+                this.gameLoop = requestAnimationFrame(time => this.update(time));
+            }
+
+            connectToServer() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
+                
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+                
+                console.log('Connecting to WebSocket server:', wsUrl);
+                this.ws = new WebSocket(wsUrl);
+
+                this.ws.onopen = () => {
+                    console.log('Connected to server');
+                    this.reconnectAttempts = 0;
+                    
+                    // Request initial game state
+                    if (this.playerId) {
+                        this.ws.send(JSON.stringify({
+                            type: 'requestState',
+                            playerId: this.playerId
+                        }));
+                    }
+                };
+
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received message:', data.type);
+                        
+                        switch (data.type) {
+                            case 'init':
+                                this.playerId = data.playerId;
+                                this.players.clear();
+                                this.fish.clear();
+                                data.players.forEach(player => {
+                                    this.players.set(player.id, player);
+                                });
+                                data.fish.forEach(fish => {
+                                    this.fish.set(fish.id, fish);
+                                });
+                                break;
+
+                            case 'playerJoined':
+                                this.players.set(data.player.id, data.player);
+                                break;
+
+                            case 'playerLeft':
+                                this.players.delete(data.playerId);
+                                break;
+
+                            case 'playerMoved':
+                                if (data.player.id !== this.playerId) {
+                                    this.players.set(data.player.id, data.player);
+                                }
+                                break;
+
+                            case 'playerUpdated':
+                                if (data.player.id !== this.playerId) {
+                                    this.players.set(data.player.id, data.player);
+                                }
+                                break;
+
+                            case 'fishUpdate':
+                                this.fish.delete(data.eaten);
+                                this.fish.set(data.new.id, data.new);
+                                break;
+                        }
+                    } catch (error) {
+                        console.error('Error processing message:', error);
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    console.log('Disconnected from server');
+                    this.ws = null;
+                    
+                    // Exponential backoff for reconnection
+                    const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts || 0), 30000);
+                    this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+                    
+                    console.log(`Reconnecting in ${backoffDelay}ms...`);
+                    setTimeout(() => this.connectToServer(), backoffDelay);
+                };
+
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+            }
+
+            updatePlayerPosition(deltaTime) {
+                const player = this.players.get(this.playerId);
+                if (!player) return;
+
+                const speed = 5 * (60 / (1000 / deltaTime));
+                let dx = 0;
+                let dy = 0;
+
+                // Keyboard movement
+                if (this.keys.has('w') || this.keys.has('arrowup')) dy -= speed;
+                if (this.keys.has('s') || this.keys.has('arrowdown')) dy += speed;
+                if (this.keys.has('a') || this.keys.has('arrowleft')) dx -= speed;
+                if (this.keys.has('d') || this.keys.has('arrowright')) dx += speed;
+
+                // Mouse movement
+                if (!dx && !dy) {
+                    const targetX = this.mouseX + this.camera.x;
+                    const targetY = this.mouseY + this.camera.y;
+                    const angle = Math.atan2(targetY - player.y, targetX - player.x);
+                    dx = Math.cos(angle) * speed;
+                    dy = Math.sin(angle) * speed;
+                }
+
+                // Update position with bounds checking
+                player.x = Math.max(player.radius, Math.min(this.worldBounds.width - player.radius, player.x + dx));
+                player.y = Math.max(player.radius, Math.min(this.worldBounds.height - player.radius, player.y + dy));
+
+                // Update camera to follow player
+                this.camera.x = player.x - this.canvas.width / 2;
+                this.camera.y = player.y - this.canvas.height / 2;
+
+                // Send position update to server
+                this.ws.send(JSON.stringify({
+                    type: 'updatePlayer',
+                    x: player.x,
+                    y: player.y,
+                    radius: player.radius
+                }));
+            }
+
+            checkCollisions() {
+                const player = this.players.get(this.playerId);
+                if (!player) return;
+
+                this.fish.forEach((fish, fishId) => {
+                    const dx = player.x - fish.x;
+                    const dy = player.y - fish.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < player.radius + fish.radius) {
+                        if (player.radius > fish.radius * 1.1) {
+                            // Player eats fish
+                            player.radius += fish.radius * 0.1;
+                            this.ws.send(JSON.stringify({
+                                type: 'fishEaten',
+                                fishId: fishId
+                            }));
+                            document.getElementById('score').textContent = `Size: ${Math.round(player.radius)}`;
+                        }
+                    }
+                });
+            }
+
+            draw() {
+                if (!this.ctx || !this.canvas) return;
+                
+                // Clear canvas with background
+                this.ctx.fillStyle = '#87CEEB';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Save context for camera transform
+                this.ctx.save();
+                
+                // Apply camera transform
+                this.ctx.translate(-this.camera.x, -this.camera.y);
+                
+                // Draw world bounds
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(0, 0, this.worldBounds.width, this.worldBounds.height);
+
+                // Draw grid
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                this.ctx.lineWidth = 0.5;
+                const gridSize = 200;
+                for (let x = 0; x < this.worldBounds.width; x += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.worldBounds.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.worldBounds.height; y += gridSize) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.worldBounds.width, y);
+                    this.ctx.stroke();
+                }
+                
+                // Draw fish
+                this.fish.forEach(fish => {
+                    if (!fish) return;
+                    this.ctx.fillStyle = fish.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(fish.x, fish.y, fish.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw players
+                this.players.forEach(player => {
+                    if (!player) return;
+                    this.ctx.fillStyle = player.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Draw player name
+                    if (player.name) {
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.font = '14px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(player.name, player.x, player.y - player.radius - 5);
+                    }
+                });
+                
+                this.ctx.restore();
+            }
+
+            update(currentTime) {
+                if (!this.lastTime) this.lastTime = currentTime;
+                const deltaTime = currentTime - this.lastTime;
+                this.lastTime = currentTime;
+
+                if (this.playerId && this.players.has(this.playerId)) {
+                    this.updatePlayerPosition(deltaTime);
+                    this.checkCollisions();
+                }
+                
+                this.draw();
+                this.gameLoop = requestAnimationFrame(time => this.update(time));
+            }
+
+            stop() {
+                if (this.gameLoop) {
+                    cancelAnimationFrame(this.gameLoop);
+                    this.gameLoop = null;
+                }
+                document.getElementById('start-screen').style.display = 'block';
+            }
+
+            resizeCanvas() {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+            }
+
+            handleKeyDown(e) {
+                this.keys.add(e.key.toLowerCase());
+            }
+
+            handleKeyUp(e) {
+                this.keys.delete(e.key.toLowerCase());
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Initialize SDK and hide splash screen
+                await sdk.actions.ready();
+                
+                // Get user info from Farcaster context
+                const context = await sdk.context;
+                
+                // Update player info if available
+                if (context && context.user) {
+                    const playerAvatar = document.getElementById('player-avatar');
+                    const playerName = document.getElementById('player-name');
+                    
+                    // Only update pfp if it exists
+                    if (context.user.pfpUrl) {
+                        playerAvatar.src = context.user.pfpUrl;
+                    }
+                    
+                    // Use fallbacks for display name
+                    playerName.textContent = context.user.displayName || 
+                                          context.user.username || 
+                                          `Player #${context.user.fid}`;
+                }
+
+                // Initialize game
+                const canvas = document.getElementById('game-canvas');
+                const game = new Game(canvas);
+
+                // Set initial canvas size
+                game.resizeCanvas();
+                
+                // Add start button listener
+                document.getElementById('start-button').addEventListener('click', () => {
+                    game.start();
+                    document.getElementById('score').textContent = 'Size: 20';
+                });
+
+                // Show start screen
+                document.getElementById('start-screen').style.display = 'block';
+                document.getElementById('score').style.display = 'none';
+
+                console.log('Game initialized successfully');
+            } catch (e) {
+                console.error('Error initializing game:', e);
+                // Set fallback state on error
+                document.getElementById('player-name').textContent = 'Anonymous Player';
+            }
+        });
+    </script>
+</body>
+</html> 

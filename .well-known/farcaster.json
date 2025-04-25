@@ -1,0 +1,10 @@
+{
+    "name": "Hello World Mini App",
+    "description": "A simple hello world mini app for FarCaster",
+    "icon": "https://example.com/icon.png",
+    "splash": {
+        "image": "https://example.com/splash.png",
+        "backgroundColor": "#ffffff"
+    },
+    "version": "1.0.0"
+} 
