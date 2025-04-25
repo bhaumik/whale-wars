@@ -34,7 +34,7 @@ const port = process.env.PORT || 8080;
 // Serve a simple status page
 app.get('/', (req, res) => {
     res.send(`
-        Whale Wars WebSocket Server - Status: Running<br>
+        Whale Wars WebSocket Server - Status: Running ✅<br>
         <h3>Image Status:</h3>
         <img src="/icon.png" alt="Icon Test" style="width: 50px; height: 50px;"><br>
         <img src="/preview.png" alt="Preview Test" style="width: 200px;">
