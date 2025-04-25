@@ -473,7 +473,7 @@
                 const playerName = document.getElementById('player-name');
                 const playerAvatar = document.getElementById('player-avatar');
                 
-                if (isMiniApp && userContext?.fid) {
+                if (isMiniApp && userContext) {
                     console.log('🎭 Setting Mini App user display:', {
                         displayName: userContext.displayName,
                         username: userContext.username,
