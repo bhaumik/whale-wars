@@ -182,17 +182,20 @@
                     return;
                 }
                 
+                // World bounds
+                this.worldBounds = {
+                    width: 8000,
+                    height: 8000
+                };
+
                 // Camera/viewport
                 this.camera = {
                     x: 0,
                     y: 0,
-                    scale: 1
-                };
-
-                // World bounds
-                this.worldBounds = {
-                    width: 5000,
-                    height: 5000
+                    scale: 1,
+                    baseScale: 1,
+                    minScale: 0.25,  // Increased zoom out capability for larger map
+                    maxScale: 1
                 };
 
                 // Initialize event listeners
@@ -318,7 +321,19 @@
                 const player = this.players.get(this.playerId);
                 if (!player) return;
 
-                const speed = 5 * (60 / (1000 / deltaTime));
+                // Update camera scale based on player size
+                const basePlayerRadius = 20;
+                const scaleFactor = basePlayerRadius / player.radius;
+                // Smoother scale transition
+                const targetScale = Math.max(
+                    this.camera.minScale,
+                    Math.min(this.camera.maxScale, scaleFactor)
+                );
+                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.1;
+
+                // Adjust base speed based on world size
+                const baseSpeed = 7;  // Increased base speed for larger map
+                const speed = baseSpeed * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
                 let dx = 0;
                 let dy = 0;
 
@@ -341,9 +356,9 @@
                 player.x = Math.max(player.radius, Math.min(this.worldBounds.width - player.radius, player.x + dx));
                 player.y = Math.max(player.radius, Math.min(this.worldBounds.height - player.radius, player.y + dy));
 
-                // Update camera to follow player
-                this.camera.x = player.x - this.canvas.width / 2;
-                this.camera.y = player.y - this.canvas.height / 2;
+                // Update camera position with scaling
+                this.camera.x = player.x - (this.canvas.width / 2) / this.camera.scale;
+                this.camera.y = player.y - (this.canvas.height / 2) / this.camera.scale;
 
                 // Send position update to server
                 this.ws.send(JSON.stringify({
@@ -460,7 +475,8 @@
                 // Save context for camera transform
                 this.ctx.save();
                 
-                // Apply camera transform
+                // Apply camera transform with scale
+                this.ctx.scale(this.camera.scale, this.camera.scale);
                 this.ctx.translate(-this.camera.x, -this.camera.y);
                 
                 // Draw world bounds
@@ -468,10 +484,10 @@
                 this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(0, 0, this.worldBounds.width, this.worldBounds.height);
 
-                // Draw grid
+                // Draw grid with larger spacing
                 this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
                 this.ctx.lineWidth = 0.5;
-                const gridSize = 200;
+                const gridSize = 400;  // Larger grid size for bigger map
                 for (let x = 0; x < this.worldBounds.width; x += gridSize) {
                     this.ctx.beginPath();
                     this.ctx.moveTo(x, 0);
@@ -546,12 +562,24 @@
             resizeCanvas() {
                 this.canvas.width = this.canvas.offsetWidth;
                 this.canvas.height = this.canvas.offsetHeight;
+                
+                // Update camera scale on resize
+                const player = this.players.get(this.playerId);
+                if (player) {
+                    const basePlayerRadius = 20;
+                    const scaleFactor = basePlayerRadius / player.radius;
+                    this.camera.scale = Math.max(
+                        this.camera.minScale,
+                        Math.min(this.camera.maxScale, scaleFactor)
+                    );
+                }
             }
 
             handleMouseMove(e) {
                 const rect = this.canvas.getBoundingClientRect();
-                this.mouseX = e.clientX - rect.left;
-                this.mouseY = e.clientY - rect.top;
+                // Adjust mouse position based on camera scale
+                this.mouseX = (e.clientX - rect.left) / this.camera.scale;
+                this.mouseY = (e.clientY - rect.top) / this.camera.scale;
             }
 
             handleKeyDown(e) {
