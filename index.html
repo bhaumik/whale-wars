@@ -270,9 +270,15 @@
             }
 
             start() {
-                if (this.gameLoop) return;
+                console.log('🎮 [START] Starting game...');
+                if (this.gameLoop) {
+                    console.log('⚠️ [START] Game loop already exists, cancelling');
+                    cancelAnimationFrame(this.gameLoop);
+                    this.gameLoop = null;
+                }
                 
                 // Connect to WebSocket server
+                console.log('🎮 [START] Connecting to server...');
                 this.connectToServer();
                 
                 // Show score and hide start screen
@@ -280,7 +286,10 @@
                 document.getElementById('score').style.display = 'none';
                 document.getElementById('leaderboard').style.display = 'block';
                 
+                console.log('🎮 [START] UI updated');
+                
                 // Start game loop
+                console.log('🎮 [START] Starting game loop');
                 this.gameLoop = requestAnimationFrame(time => this.update(time));
             }
 
@@ -288,20 +297,19 @@
                 const wsUrl = 'wss://whale-wars.onrender.com';
                 
                 if (this.ws) {
-                    console.log('Closing existing connection...');
+                    console.log('🌐 [WEBSOCKET] Closing existing connection, state:', this.ws.readyState);
                     this.ws.close();
                     this.ws = null;
                 }
                 
-                console.log('Connecting to WebSocket server:', wsUrl);
+                console.log('🌐 [WEBSOCKET] Connecting to:', wsUrl);
                 this.ws = new WebSocket(wsUrl);
 
                 this.ws.onopen = () => {
-                    console.log('Connected to server');
+                    console.log('🌐 [WEBSOCKET] Connected successfully');
                     this.reconnectAttempts = 0;
                     
-                    // Send player info using stored info from constructor
-                    console.log('Sending stored player info:', this.playerInfo);
+                    console.log('🌐 [WEBSOCKET] Sending player info:', this.playerInfo);
                     this.ws.send(JSON.stringify({
                         type: 'playerInfo',
                         name: this.playerInfo.name,
@@ -363,19 +371,19 @@
                 };
 
                 this.ws.onclose = () => {
-                    console.log('Disconnected from server');
+                    console.log('🌐 [WEBSOCKET] Disconnected');
                     this.ws = null;
                     
                     // Exponential backoff for reconnection
                     const backoffDelay = Math.min(1000 * Math.pow(2, this.reconnectAttempts || 0), 30000);
                     this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
                     
-                    console.log(`Reconnecting in ${backoffDelay}ms...`);
+                    console.log(`🌐 [WEBSOCKET] Reconnecting in ${backoffDelay}ms... (attempt ${this.reconnectAttempts})`);
                     setTimeout(() => this.connectToServer(), backoffDelay);
                 };
 
                 this.ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
+                    console.error('❌ [WEBSOCKET] Error:', error);
                 };
             }
 
@@ -551,10 +559,10 @@
                 
                 const avatarEl = document.createElement('img');
                 avatarEl.className = 'avatar';
-                avatarEl.src = player.avatar || '/icon.png';
+                avatarEl.src = player.avatar || '/icon.png?v=1';
                 avatarEl.alt = `${player.name}'s avatar`;
                 avatarEl.onerror = () => {
-                    avatarEl.src = '/icon.png';
+                    avatarEl.src = '/icon.png?v=1';
                 };
                 
                 const nameEl = document.createElement('div');
@@ -760,8 +768,15 @@
             }
 
             respawnPlayer() {
-                console.log('🔄 Attempting to respawn player...');
-                
+                console.log('🔄 [RESPAWN] Starting respawn process...');
+                console.log('🔄 [RESPAWN] Current game state:', {
+                    playerId: this.playerId,
+                    hasWebSocket: !!this.ws,
+                    webSocketState: this.ws ? this.ws.readyState : 'no socket',
+                    playerCount: this.players.size,
+                    isDead: !!this.deathType
+                });
+
                 // Reset game state
                 this.dangerZone.falling = false;
                 this.dangerZone.intensity = 0;
@@ -769,13 +784,23 @@
                 this.deathType = null;
                 this.killerInfo = null;
                 
+                console.log('🔄 [RESPAWN] Game state reset');
+
                 // Hide game over screen and show leaderboard
                 this.gameOverScreen.style.display = 'none';
                 document.getElementById('leaderboard').style.display = 'block';
+                console.log('🔄 [RESPAWN] UI reset');
+
+                // Stop current game loop if it exists
+                if (this.gameLoop) {
+                    console.log('🔄 [RESPAWN] Stopping current game loop');
+                    cancelAnimationFrame(this.gameLoop);
+                    this.gameLoop = null;
+                }
 
                 // Reconnect to server to get fresh game state
-                console.log('🔄 Reconnecting to server...');
-                this.connectToServer();
+                console.log('🔄 [RESPAWN] Starting new game...');
+                this.start();
             }
 
             drawOverlayEffects() {
@@ -812,10 +837,10 @@
                             
                             if (finalRankEl) finalRankEl.textContent = `${rank}.`;
                             if (finalAvatarEl) {
-                                finalAvatarEl.src = player.avatar || '/icon.png';
+                                finalAvatarEl.src = player.avatar || '/icon.png?v=1';
                                 finalAvatarEl.alt = `${player.name}'s avatar`;
                                 finalAvatarEl.onerror = () => {
-                                    finalAvatarEl.src = '/icon.png';
+                                    finalAvatarEl.src = '/icon.png?v=1';
                                 };
                             }
                             if (finalNameEl) finalNameEl.textContent = player.name;
