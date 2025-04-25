@@ -208,8 +208,9 @@
                     fallDuration: 2000  // 2 seconds for fall animation
                 };
 
-                // Add death type tracking
+                // Add death type and killer tracking
                 this.deathType = null; // 'eaten' or 'fell'
+                this.killerInfo = null; // Store who ate the player
 
                 // Create overlay canvas for effects
                 this.overlayCanvas = document.createElement('canvas');
@@ -239,11 +240,6 @@
                 this.gameOverScreen.style.padding = '20px';
                 this.updateGameOverScreen();
                 document.getElementById('game-area').appendChild(this.gameOverScreen);
-
-                // Add respawn button listener
-                document.getElementById('respawn-button')?.addEventListener('click', () => {
-                    this.respawnPlayer();
-                });
 
                 // Initialize event listeners
                 window.addEventListener('mousemove', this.handleMouseMove.bind(this));
@@ -769,11 +765,12 @@
                     player.y = this.worldBounds.height / 2;
                     player.radius = 20; // Reset size
                     
-                    // Reset danger zone and death type
+                    // Reset all death-related state
                     this.dangerZone.falling = false;
                     this.dangerZone.intensity = 0;
                     this.dangerZone.active = false;
                     this.deathType = null;
+                    this.killerInfo = null;
                     
                     // Hide game over screen and show leaderboard again
                     this.gameOverScreen.style.display = 'none';
@@ -857,16 +854,28 @@
                     fell: {
                         title: 'The Earth is Flat',
                         subtitle: 'You fell off',
-                        emojis: '🫵 😂'
+                        emojis: '🫵 😂',
+                        shareText: `Flat Earthers were right! Made it to size {score} before falling off 🌍`
                     },
                     eaten: {
                         title: 'Size Matters',
                         subtitle: 'Better luck next time',
-                        emojis: '🤏 🐋'
+                        emojis: '🤏 🐋',
+                        shareText: `@{killer} just swallowed me at size {score} in Whale Wars 🤏🐋`
                     }
                 };
 
                 const msg = messages[this.deathType || 'fell'];
+                const player = this.players.get(this.playerId);
+                const score = player ? Math.round(player.radius) : 0;
+                
+                // Format share text
+                let shareText = msg.shareText
+                    .replace('{score}', score);
+                
+                if (this.deathType === 'eaten' && this.killerInfo) {
+                    shareText = shareText.replace('{killer}', this.killerInfo.name);
+                }
                 
                 this.gameOverScreen.innerHTML = `
                     <div style="font-size: 64px; margin-bottom: 30px;">${msg.title}</div>
@@ -889,19 +898,79 @@
                         <div id="final-name" style="color: white; font-size: 16px; text-align: left;"></div>
                         <div id="final-score" style="color: #6366f1; font-size: 16px; text-align: right;"></div>
                     </div>
-                    <button id="respawn-button" style="
-                        margin-top: 20px;
-                        padding: 15px 30px;
-                        font-size: 24px;
-                        background: #6366f1;
-                        color: white;
-                        border: none;
-                        border-radius: 10px;
-                        cursor: pointer;
-                        font-family: inherit;
-                        transition: background 0.2s;
-                    ">Try Again</button>
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                        <button id="respawn-button" style="
+                            padding: 15px 30px;
+                            font-size: 24px;
+                            background: #6366f1;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-family: inherit;
+                            transition: background 0.2s;
+                        ">Try Again</button>
+                        <button id="share-button" style="
+                            padding: 15px 30px;
+                            font-size: 24px;
+                            background: #10B981;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-family: inherit;
+                            transition: background 0.2s;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        ">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M23 3.01s-2.018 1.192-3.14 1.53a4.48 4.48 0 00-7.86 3v1a10.66 10.66 0 01-9-4.53s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5 0-.278-.028-.556-.08-.83C21.94 5.674 23 3.01 23 3.01z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Share
+                        </button>
+                    </div>
                 `;
+
+                // Add share button listener
+                document.getElementById('share-button')?.addEventListener('click', () => {
+                    this.shareGameOver(shareText);
+                });
+
+                // Add respawn button listener
+                document.getElementById('respawn-button')?.addEventListener('click', () => {
+                    this.respawnPlayer();
+                });
+            }
+
+            async shareGameOver(text) {
+                try {
+                    // Use the Farcaster Frame SDK to share
+                    await sdk.actions.cast({
+                        text: text,
+                        embeds: [{
+                            url: 'https://whale-wars.onrender.com'
+                        }]
+                    });
+                } catch (error) {
+                    console.error('Error sharing:', error);
+                }
+            }
+
+            handlePlayerEaten(killerPlayer) {
+                // Store killer info
+                this.killerInfo = {
+                    name: killerPlayer.name,
+                    id: killerPlayer.id
+                };
+                
+                // Set death type and hide leaderboard
+                this.deathType = 'eaten';
+                document.getElementById('leaderboard').style.display = 'none';
+                
+                // Update and show game over screen
+                this.updateGameOverScreen();
+                this.gameOverScreen.style.display = 'block';
             }
 
             // Add method to handle avatar loading
