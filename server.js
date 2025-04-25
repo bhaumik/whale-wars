@@ -87,20 +87,10 @@ wss.on('connection', (ws) => {
     ws.playerId = playerId;
     console.log(`Player ${playerId} connected`);
 
-    // Initialize player with default values
-    const defaultPlayer = {
-        id: playerId,
-        x: 2500,
-        y: 2500,
-        radius: 20,
-        color: '#0066cc',
-        name: 'Anonymous',
-        fid: null,
-        avatar: null
-    };
-    players.set(playerId, defaultPlayer);
+    // Don't create a player immediately, wait for playerInfo
+    console.log('Waiting for player info...');
 
-    // Send initial game state
+    // Send initial game state without the new player
     ws.send(JSON.stringify({
         type: 'init',
         playerId: playerId,
@@ -108,25 +98,43 @@ wss.on('connection', (ws) => {
         fish: Array.from(fish.values())
     }));
 
-    // Broadcast new player to others
-    wss.clients.forEach((client) => {
-        if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify({
-                type: 'playerJoined',
-                player: defaultPlayer
-            }));
-        }
-    });
-
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
 
             switch (data.type) {
+                case 'playerInfo':
+                    // Create or update player when we get their info
+                    const player = {
+                        id: playerId,
+                        x: 2500,
+                        y: 2500,
+                        radius: 20,
+                        color: '#0066cc',
+                        name: data.name,
+                        fid: data.fid,
+                        avatar: data.avatar
+                    };
+                    
+                    // Add player to game
+                    players.set(playerId, player);
+                    console.log(`Player ${data.name} (${playerId}) joined the game`);
+
+                    // Broadcast new player to all clients
+                    wss.clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: 'playerJoined',
+                                player: player
+                            }));
+                        }
+                    });
+                    break;
+
                 case 'updatePlayer':
-                    const player = players.get(playerId);
-                    if (player) {
-                        Object.assign(player, {
+                    const existingPlayer = players.get(playerId);
+                    if (existingPlayer) {
+                        Object.assign(existingPlayer, {
                             x: data.x,
                             y: data.y,
                             radius: data.radius
@@ -137,7 +145,7 @@ wss.on('connection', (ws) => {
                             if (client !== ws && client.readyState === WebSocket.OPEN) {
                                 client.send(JSON.stringify({
                                     type: 'playerMoved',
-                                    player: player
+                                    player: existingPlayer
                                 }));
                             }
                         });
@@ -165,27 +173,6 @@ wss.on('connection', (ws) => {
                                     type: 'fishUpdate',
                                     eaten: data.fishId,
                                     new: newFish
-                                }));
-                            }
-                        });
-                    }
-                    break;
-
-                case 'playerInfo':
-                    const existingPlayer = players.get(playerId);
-                    if (existingPlayer) {
-                        Object.assign(existingPlayer, {
-                            name: data.name || existingPlayer.name,
-                            fid: data.fid || existingPlayer.fid,
-                            avatar: data.avatar || existingPlayer.avatar
-                        });
-
-                        // Broadcast player info update
-                        wss.clients.forEach((client) => {
-                            if (client.readyState === WebSocket.OPEN) {
-                                client.send(JSON.stringify({
-                                    type: 'playerUpdated',
-                                    player: existingPlayer
                                 }));
                             }
                         });
