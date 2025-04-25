@@ -698,6 +698,12 @@
             }
 
             update(currentTime) {
+                // Don't update if we're falling or dead
+                if (this.dangerZone.falling || this.deathType) {
+                    this.drawOverlayEffects();
+                    return;
+                }
+
                 if (!this.lastTime) this.lastTime = currentTime;
                 const deltaTime = currentTime - this.lastTime;
                 this.lastTime = currentTime;
@@ -708,7 +714,11 @@
                 }
                 
                 this.draw();
-                this.gameLoop = requestAnimationFrame(time => this.update(time));
+                
+                // Only continue the game loop if we're not falling or dead
+                if (!this.dangerZone.falling && !this.deathType) {
+                    this.gameLoop = requestAnimationFrame(time => this.update(time));
+                }
             }
 
             stop() {
@@ -758,9 +768,17 @@
 
             startFalling() {
                 if (!this.dangerZone.falling) {
+                    console.log('🎮 [FALL] Player starting to fall');
                     this.dangerZone.falling = true;
                     this.dangerZone.fallStartTime = Date.now();
                     this.deathType = 'fell';
+                    
+                    // Stop the game loop when falling starts
+                    if (this.gameLoop) {
+                        console.log('🎮 [FALL] Stopping game loop');
+                        cancelAnimationFrame(this.gameLoop);
+                        this.gameLoop = null;
+                    }
                     
                     // Hide leaderboard when falling starts
                     document.getElementById('leaderboard').style.display = 'none';
@@ -769,38 +787,47 @@
 
             respawnPlayer() {
                 console.log('🔄 [RESPAWN] Starting respawn process...');
-                console.log('🔄 [RESPAWN] Current game state:', {
-                    playerId: this.playerId,
-                    hasWebSocket: !!this.ws,
-                    webSocketState: this.ws ? this.ws.readyState : 'no socket',
-                    playerCount: this.players.size,
-                    isDead: !!this.deathType
-                });
-
-                // Reset game state
-                this.dangerZone.falling = false;
-                this.dangerZone.intensity = 0;
-                this.dangerZone.active = false;
-                this.deathType = null;
-                this.killerInfo = null;
                 
-                console.log('🔄 [RESPAWN] Game state reset');
-
-                // Hide game over screen and show leaderboard
-                this.gameOverScreen.style.display = 'none';
-                document.getElementById('leaderboard').style.display = 'block';
-                console.log('🔄 [RESPAWN] UI reset');
-
-                // Stop current game loop if it exists
+                // First, stop everything
                 if (this.gameLoop) {
-                    console.log('🔄 [RESPAWN] Stopping current game loop');
+                    console.log('🔄 [RESPAWN] Cancelling existing game loop');
                     cancelAnimationFrame(this.gameLoop);
                     this.gameLoop = null;
                 }
 
-                // Reconnect to server to get fresh game state
-                console.log('🔄 [RESPAWN] Starting new game...');
-                this.start();
+                if (this.ws) {
+                    console.log('🔄 [RESPAWN] Closing existing WebSocket connection');
+                    this.ws.close();
+                    this.ws = null;
+                }
+
+                // Clear all game state
+                console.log('🔄 [RESPAWN] Clearing game state');
+                this.players.clear();
+                this.fish.clear();
+                this.playerId = null;
+                this.dangerZone = {
+                    width: 1000,
+                    active: false,
+                    intensity: 0,
+                    falling: false,
+                    fallStartTime: 0,
+                    fallDuration: 2000
+                };
+                this.deathType = null;
+                this.killerInfo = null;
+                
+                // Reset UI
+                console.log('🔄 [RESPAWN] Resetting UI');
+                this.gameOverScreen.style.display = 'none';
+                document.getElementById('leaderboard').style.display = 'block';
+                document.getElementById('score').style.display = 'none';
+
+                // Start fresh game
+                console.log('🔄 [RESPAWN] Starting fresh game');
+                setTimeout(() => {
+                    this.start();
+                }, 100); // Small delay to ensure cleanup is complete
             }
 
             drawOverlayEffects() {
