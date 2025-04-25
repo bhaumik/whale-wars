@@ -260,17 +260,12 @@
 
             start() {
                 console.log('🎮 [START] Starting game...');
-                if (this.gameLoop) {
-                    console.log('⚠️ [START] Game loop already exists, cancelling');
-                    cancelAnimationFrame(this.gameLoop);
-                    this.gameLoop = null;
-                }
                 
-                // Connect to WebSocket server
+                // Connect to WebSocket server first
                 console.log('🎮 [START] Connecting to server...');
                 this.connectToServer();
                 
-                // Show leaderboard, hide score initially
+                // Show leaderboard
                 document.getElementById('leaderboard').style.display = 'block';
                 document.getElementById('score').style.display = 'none';
                 
@@ -782,39 +777,38 @@
                     this.gameLoop = null;
                 }
 
+                // Close existing connection
                 if (this.ws) {
                     console.log('🔄 [RESPAWN] Closing existing WebSocket connection');
                     this.ws.close();
                     this.ws = null;
                 }
 
-                // Clear all game state
+                // Clear game state
                 console.log('🔄 [RESPAWN] Clearing game state');
                 this.players.clear();
                 this.fish.clear();
                 this.playerId = null;
-                this.dangerZone = {
-                    width: 1000,
-                    active: false,
-                    intensity: 0,
-                    falling: false,
-                    fallStartTime: 0,
-                    fallDuration: 2000
-                };
                 this.deathType = null;
                 this.killerInfo = null;
+                this.dangerZone.falling = false;
+                this.dangerZone.intensity = 0;
+                this.dangerZone.active = false;
+
+                // Clear any death effects
+                if (this.overlayCtx) {
+                    console.log('🔄 [RESPAWN] Clearing overlay effects');
+                    this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                }
                 
-                // Reset UI
+                // Hide death screen, show game UI
                 console.log('🔄 [RESPAWN] Resetting UI');
                 this.gameOverScreen.style.display = 'none';
                 document.getElementById('leaderboard').style.display = 'block';
-                document.getElementById('score').style.display = 'none';
 
                 // Start fresh game
                 console.log('🔄 [RESPAWN] Starting fresh game');
-                setTimeout(() => {
-                    this.start();
-                }, 100); // Small delay to ensure cleanup is complete
+                this.start();
             }
 
             drawOverlayEffects() {
@@ -881,9 +875,17 @@
             }
 
             updateGameOverScreen() {
-                console.log('🎮 Updating game over screen...');
+                console.log('🎮 [GAMEOVER] Updating game over screen...');
                 console.log('Death type:', this.deathType);
                 console.log('Killer info:', this.killerInfo);
+                
+                // Stop the game loop when showing game over
+                if (this.gameLoop) {
+                    console.log('🎮 [GAMEOVER] Stopping game loop');
+                    cancelAnimationFrame(this.gameLoop);
+                    this.gameLoop = null;
+                }
+
                 const messages = {
                     fell: {
                         title: 'The Earth is Flat',
@@ -958,17 +960,43 @@
                     </div>
                 `;
 
-                // Add share button listener
+                // Add button listeners
                 document.getElementById('share-button')?.addEventListener('click', () => {
-                    console.log('🎮 Share button clicked');
+                    console.log('🎮 [GAMEOVER] Share button clicked');
                     this.shareGameOver();
                 });
 
-                // Add respawn button listener
                 document.getElementById('respawn-button')?.addEventListener('click', () => {
-                    console.log('🔄 Respawn button clicked');
+                    console.log('🔄 [GAMEOVER] Respawn button clicked');
                     this.respawnPlayer();
                 });
+
+                // Update final stats
+                const finalRankEl = document.getElementById('final-rank');
+                const finalAvatarEl = document.getElementById('final-avatar');
+                const finalNameEl = document.getElementById('final-name');
+                const finalScoreEl = document.getElementById('final-score');
+
+                if (player) {
+                    // Sort players to get rank
+                    const sortedPlayers = Array.from(this.players.values())
+                        .sort((a, b) => b.radius - a.radius);
+                    const rank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
+                    
+                    if (finalRankEl) finalRankEl.textContent = `${rank}.`;
+                    if (finalAvatarEl) {
+                        finalAvatarEl.src = player.avatar || '/icon.png';
+                        finalAvatarEl.alt = `${player.name}'s avatar`;
+                        finalAvatarEl.onerror = () => {
+                            finalAvatarEl.src = '/icon.png';
+                        };
+                    }
+                    if (finalNameEl) finalNameEl.textContent = player.name;
+                    if (finalScoreEl) finalScoreEl.textContent = Math.round(player.radius);
+                }
+
+                // Show the game over screen
+                this.gameOverScreen.style.display = 'block';
             }
 
             async shareGameOver() {
