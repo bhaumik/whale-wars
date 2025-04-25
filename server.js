@@ -6,7 +6,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors({
-    origin: ['https://whale-wars.vercel.app', 'https://whale-wars.onrender.com', 'http://localhost:3000'],
+    origin: ['https://whale-wars.onrender.com', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
     credentials: true
 }));
