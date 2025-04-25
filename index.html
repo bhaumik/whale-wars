@@ -142,7 +142,19 @@
                         Move with your mouse or WASD keys.<br>
                         Eat smaller fish to grow bigger!
                     </p>
-                    <button id="start-button" aria-label="Start Game">Start Game</button>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="start-button" aria-label="Start Game">Start Game</button>
+                        <button id="add-button" style="
+                            background: #10B981;
+                            color: white;
+                            border: none;
+                            padding: 1rem 2rem;
+                            border-radius: 0.5rem;
+                            font-size: 1.2rem;
+                            cursor: pointer;
+                            transition: background 0.2s;
+                        ">Add to Warpcast</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -298,14 +310,21 @@
                     console.log('Connected to server');
                     this.reconnectAttempts = 0;
                     
-                    // Send player info using stored info from constructor
-                    console.log('Sending stored player info:', this.playerInfo);
-                    this.ws.send(JSON.stringify({
-                        type: 'playerInfo',
-                        name: this.playerInfo.name,
-                        fid: this.playerInfo.fid,
-                        avatar: this.playerInfo.avatar
-                    }));
+                    // Add a small delay to ensure the connection is fully established
+                    setTimeout(() => {
+                        // Send player info using stored info from constructor
+                        console.log('Sending stored player info:', this.playerInfo);
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                            this.ws.send(JSON.stringify({
+                                type: 'playerInfo',
+                                name: this.playerInfo.name,
+                                fid: this.playerInfo.fid,
+                                avatar: this.playerInfo.avatar
+                            }));
+                        } else {
+                            console.error('WebSocket not ready for sending player info');
+                        }
+                    }, 100);
                 };
 
                 this.ws.onmessage = (event) => {
@@ -1065,6 +1084,18 @@
                 document.getElementById('start-button').addEventListener('click', () => {
                     console.log('🎮 Game starting...');
                     game.start();
+                });
+
+                // Add listener for the add button
+                console.log('🎯 Adding add button listener...');
+                document.getElementById('add-button').addEventListener('click', async () => {
+                    try {
+                        console.log('➕ Adding game to Warpcast...');
+                        await sdk.actions.addFrame();
+                        console.log('✅ Game added to Warpcast successfully');
+                    } catch (error) {
+                        console.error('❌ Error adding game to Warpcast:', error);
+                    }
                 });
 
                 // Show UI
