@@ -184,8 +184,8 @@
                 
                 // World bounds
                 this.worldBounds = {
-                    width: 12000,
-                    height: 12000
+                    width: 20000,
+                    height: 20000
                 };
 
                 // Camera/viewport
@@ -194,9 +194,8 @@
                     y: 0,
                     scale: 1,
                     baseScale: 1,
-                    minScale: 0.2,  // Allow slightly more zoom out
-                    maxScale: 1,
-                    zoomThreshold: 40
+                    minScale: 0.15,  // Allow more zoom out for larger world
+                    maxScale: 1
                 };
 
                 // Initialize event listeners
@@ -335,10 +334,12 @@
                 // Smooth transition (1% per frame for very smooth scaling)
                 this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.01;
 
-                // Adjust speed based on size logarithmically
+                // More aggressive speed reduction for larger sizes
                 const baseSpeed = 5;
-                const speedFactor = 1 / Math.log10(Math.max(10, player.radius / 10));
+                // More aggressive speed reduction using square of logarithm
+                const speedFactor = 1 / (Math.log10(Math.max(10, player.radius / 10)) ** 1.5);
                 const speed = baseSpeed * speedFactor * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
+
                 let dx = 0;
                 let dy = 0;
 
@@ -348,16 +349,22 @@
                 if (this.keys.has('a') || this.keys.has('arrowleft')) dx -= speed;
                 if (this.keys.has('d') || this.keys.has('arrowright')) dx += speed;
 
-                // Mouse movement
+                // Mouse movement with more gradual acceleration
                 if (!dx && !dy) {
                     const targetX = this.mouseX + this.camera.x;
                     const targetY = this.mouseY + this.camera.y;
                     const angle = Math.atan2(targetY - player.y, targetX - player.x);
-                    dx = Math.cos(angle) * speed;
-                    dy = Math.sin(angle) * speed;
+                    // Add gradual acceleration based on distance
+                    const distanceToTarget = Math.sqrt(
+                        (targetX - player.x) * (targetX - player.x) + 
+                        (targetY - player.y) * (targetY - player.y)
+                    );
+                    const accelerationFactor = Math.min(1, distanceToTarget / (player.radius * 4));
+                    dx = Math.cos(angle) * speed * accelerationFactor;
+                    dy = Math.sin(angle) * speed * accelerationFactor;
                 }
 
-                // Update position with bounds checking
+                // Allow movement within bounds
                 player.x = Math.max(player.radius, Math.min(this.worldBounds.width - player.radius, player.x + dx));
                 player.y = Math.max(player.radius, Math.min(this.worldBounds.height - player.radius, player.y + dy));
 
