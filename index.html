@@ -256,6 +256,33 @@
                         img.src = url;
                     });
                 };
+
+                // Performance monitoring
+                this.metrics = {
+                    fps: 0,
+                    frameTime: 0,
+                    messageCount: 0,
+                    bytesSent: 0,
+                    bytesReceived: 0,
+                    lastMetricsTime: Date.now()
+                };
+                
+                // Log metrics every 5 seconds
+                setInterval(() => {
+                    const now = Date.now();
+                    const timeWindow = (now - this.metrics.lastMetricsTime) / 1000;
+                    console.log('📊 [CLIENT] Performance Report:');
+                    console.log(`- FPS: ${this.metrics.fps.toFixed(1)}`);
+                    console.log(`- Frame Time: ${this.metrics.frameTime.toFixed(1)}ms`);
+                    console.log(`- Messages/sec: ${(this.metrics.messageCount / timeWindow).toFixed(1)}`);
+                    console.log(`- Bandwidth/sec: ${((this.metrics.bytesSent + this.metrics.bytesReceived) / timeWindow / 1024).toFixed(1)} KB`);
+                    
+                    // Reset counters
+                    this.metrics.messageCount = 0;
+                    this.metrics.bytesSent = 0;
+                    this.metrics.bytesReceived = 0;
+                    this.metrics.lastMetricsTime = now;
+                }, 5000);
             }
 
             start() {
@@ -334,6 +361,9 @@
                 };
 
                 this.ws.onmessage = (event) => {
+                    this.metrics.messageCount++;
+                    this.metrics.bytesReceived += event.data.length;
+                    
                     try {
                         const data = JSON.parse(event.data);
                         console.log('Received message:', data.type);
@@ -378,6 +408,20 @@
                             case 'fishUpdate':
                                 this.fish.delete(data.eaten);
                                 this.fish.set(data.new.id, data.new);
+                                break;
+
+                            case 'batchUpdate':
+                                // Handle batched position updates
+                                data.u.forEach(update => {
+                                    if (update.id !== this.playerId) {
+                                        const player = this.players.get(update.id);
+                                        if (player) {
+                                            player.x = update.x;
+                                            player.y = update.y;
+                                            player.radius = update.r;
+                                        }
+                                    }
+                                });
                                 break;
                         }
                     } catch (error) {
@@ -483,13 +527,19 @@
                 this.camera.x = player.x - (this.canvas.width / 2) / this.camera.scale;
                 this.camera.y = player.y - (this.canvas.height / 2) / this.camera.scale;
 
-                // Send position update to server
-                this.ws.send(JSON.stringify({
-                    type: 'updatePlayer',
-                    x: player.x,
-                    y: player.y,
-                    radius: player.radius
-                }));
+                // Send position update to server with delta compression
+                if (dx !== 0 || dy !== 0) {
+                    const updateMessage = JSON.stringify({
+                        type: 'updatePlayer',
+                        x: Math.round(player.x * 10) / 10, // Round to 1 decimal
+                        y: Math.round(player.y * 10) / 10,
+                        radius: Math.round(player.radius)
+                    });
+                    
+                    this.ws.send(updateMessage);
+                    this.metrics.messageCount++;
+                    this.metrics.bytesSent += updateMessage.length;
+                }
             }
 
             checkCollisions() {
@@ -713,6 +763,8 @@
             }
 
             update(currentTime) {
+                const frameStart = performance.now();
+                
                 // Don't update if we're falling or dead
                 if (this.dangerZone.falling || this.deathType) {
                     this.drawOverlayEffects();
@@ -738,6 +790,11 @@
                 if (!this.dangerZone.falling && !this.deathType) {
                     this.gameLoop = requestAnimationFrame(time => this.update(time));
                 }
+
+                // Update performance metrics
+                const frameEnd = performance.now();
+                this.metrics.frameTime = frameEnd - frameStart;
+                this.metrics.fps = 1000 / (currentTime - (this.lastTime || currentTime));
             }
 
             stop() {

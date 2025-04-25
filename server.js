@@ -45,6 +45,36 @@ const wss = new WebSocket.Server({ server });
 // Game state
 const players = new Map();
 const fish = new Map();
+const playerUpdates = new Map(); // Store pending updates
+const UPDATE_INTERVAL = 50; // Send updates every 50ms (20 updates/sec)
+
+// Performance monitoring
+const metrics = {
+    connectedPlayers: 0,
+    messagesSent: 0,
+    messagesReceived: 0,
+    bytesSent: 0,
+    bytesReceived: 0,
+    lastReset: Date.now()
+};
+
+// Log metrics every minute
+setInterval(() => {
+    const now = Date.now();
+    const timeWindow = (now - metrics.lastReset) / 1000; // seconds
+    console.log('📊 [METRICS] Performance Report:');
+    console.log(`- Connected Players: ${metrics.connectedPlayers}`);
+    console.log(`- Messages/sec: ${((metrics.messagesSent + metrics.messagesReceived) / timeWindow).toFixed(2)}`);
+    console.log(`- Bandwidth/sec: ${((metrics.bytesSent + metrics.bytesReceived) / timeWindow / 1024).toFixed(2)} KB`);
+    console.log(`- Total Bandwidth: ${((metrics.bytesSent + metrics.bytesReceived) / 1024 / 1024).toFixed(2)} MB`);
+    
+    // Reset counters but keep player count
+    metrics.messagesSent = 0;
+    metrics.messagesReceived = 0;
+    metrics.bytesSent = 0;
+    metrics.bytesReceived = 0;
+    metrics.lastReset = now;
+}, 60000);
 
 // Initialize some fish
 function initializeFish() {
@@ -82,10 +112,43 @@ setInterval(() => {
     });
 }, 30000);
 
+// Batch and send updates periodically
+setInterval(() => {
+    if (playerUpdates.size === 0) return;
+    
+    // Group updates by player
+    const updates = Array.from(playerUpdates.entries()).map(([playerId, update]) => ({
+        id: playerId,
+        x: Math.round(update.x * 10) / 10, // Round to 1 decimal
+        y: Math.round(update.y * 10) / 10,
+        r: Math.round(update.radius)
+    }));
+    
+    // Clear pending updates
+    playerUpdates.clear();
+    
+    // Send batch update to all clients
+    const updateMessage = JSON.stringify({
+        type: 'batchUpdate',
+        t: Date.now(), // timestamp
+        u: updates // shortened key names for bandwidth
+    });
+    
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(updateMessage);
+            metrics.messagesSent++;
+            metrics.bytesSent += updateMessage.length;
+        }
+    });
+}, UPDATE_INTERVAL);
+
 wss.on('connection', (ws) => {
+    metrics.connectedPlayers++;
+    
     const playerId = uuidv4();
     ws.playerId = playerId;
-    console.log(`Player ${playerId} connected`);
+    console.log(`Player ${playerId} connected (Total: ${metrics.connectedPlayers})`);
 
     // Don't create a player immediately, wait for playerInfo
     console.log('Waiting for player info...');
@@ -99,6 +162,9 @@ wss.on('connection', (ws) => {
     }));
 
     ws.on('message', (message) => {
+        metrics.messagesReceived++;
+        metrics.bytesReceived += message.length;
+        
         try {
             const data = JSON.parse(message);
 
@@ -134,20 +200,18 @@ wss.on('connection', (ws) => {
                 case 'updatePlayer':
                     const existingPlayer = players.get(playerId);
                     if (existingPlayer) {
+                        // Update player state
                         Object.assign(existingPlayer, {
                             x: data.x,
                             y: data.y,
                             radius: data.radius
                         });
-
-                        // Broadcast player update
-                        wss.clients.forEach((client) => {
-                            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                                client.send(JSON.stringify({
-                                    type: 'playerMoved',
-                                    player: existingPlayer
-                                }));
-                            }
+                        
+                        // Queue update for batch sending
+                        playerUpdates.set(playerId, {
+                            x: data.x,
+                            y: data.y,
+                            radius: data.radius
                         });
                     }
                     break;
@@ -185,7 +249,8 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', () => {
-        console.log(`Player ${playerId} disconnected`);
+        metrics.connectedPlayers--;
+        console.log(`Player ${playerId} disconnected (Total: ${metrics.connectedPlayers})`);
         players.delete(playerId);
 
         // Broadcast player left
