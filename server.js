@@ -15,6 +15,11 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
+// Explicit route for Farcaster manifest
+app.get('/.well-known/farcaster.json', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', '.well-known', 'farcaster.json'));
+});
+
 // Specific routes for images to ensure they're served
 app.get('/icon.png', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'icon.png'));
