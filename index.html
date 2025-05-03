@@ -1306,6 +1306,58 @@
             stopPingInterval() {
                 clearInterval(this.pingInterval);
             }
+            
+            // Function to update game over screen content
+            updateGameOverScreen() {
+                if (!this.gameOverScreen) return;
+                
+                // Default game over text
+                this.gameOverScreen.innerHTML = `
+                    <div>Game Over</div>
+                    <div style="font-size: 24px; margin-top: 20px;">Click to play again</div>
+                `;
+                
+                // Add click event to restart
+                this.gameOverScreen.onclick = () => {
+                    // Hide game over screen
+                    this.gameOverScreen.style.display = 'none';
+                    // Reconnect to server
+                    this.connectToServer();
+                };
+            }
+            
+            // Method to show game over screen
+            showGameOver(reason, killerInfo) {
+                if (!this.gameOverScreen) return;
+                
+                let message = 'Game Over!';
+                if (reason === 'eaten' && killerInfo) {
+                    message = `Eaten by ${killerInfo.name || 'another player'}!`;
+                } else if (reason === 'fell') {
+                    message = 'You fell off the edge!';
+                }
+                
+                this.gameOverScreen.innerHTML = `
+                    <div>${message}</div>
+                    <div style="font-size: 24px; margin-top: 20px;">Click to play again</div>
+                `;
+                
+                this.gameOverScreen.style.display = 'block';
+            }
+            
+            // Method to handle falling off the edge
+            startFalling() {
+                if (this.dangerZone.falling) return;
+                
+                this.dangerZone.falling = true;
+                this.dangerZone.fallStartTime = Date.now();
+                this.log('DEATH', 'Player started falling off the edge');
+                
+                // Show game over after fall animation completes
+                setTimeout(() => {
+                    this.showGameOver('fell');
+                }, this.dangerZone.fallDuration);
+            }
 
             // Detect if the user is likely on a mobile network
             isMobileNetwork() {
