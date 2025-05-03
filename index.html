@@ -713,6 +713,8 @@
         
         // Add comprehensive debugging for Warpcast preview
         function debugWarpcastPreview() {
+            console.log('Setting up debug overlay...');
+            
             // Create a simple debug overlay element
             const debugEl = document.createElement('div');
             debugEl.style.position = 'fixed';
@@ -743,11 +745,18 @@
             toggleBtn.style.padding = '2px 5px';
             toggleBtn.style.fontSize = '10px';
             
-            // Only show detailed debug in preview mode
-            const isInPreviewTool = window.location.href.includes('warpcast.com/~/developers/mini-apps/preview');
-            if (!isInPreviewTool) {
-                toggleBtn.style.display = 'none';
-                return;
+            // Default to always show in any environment
+            let isInPreviewTool = true;
+            
+            // Check for Warpcast preview specifically
+            if (window.location.href.includes('warpcast.com/~/developers/mini-apps/preview')) {
+                console.log('Confirmed in Warpcast preview tool, debug enabled');
+                isInPreviewTool = true;
+            } else if (window.location.href.includes('whale-wars.onrender.com')) {
+                // In production, only show debug if requested via URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                isInPreviewTool = urlParams.has('debug');
+                console.log('Production site, debug: ' + isInPreviewTool);
             }
             
             // Monitor all relevant state
@@ -767,14 +776,51 @@
             }
             
             // Log important information
-            log('Warpcast Preview Debug Mode');
+            log('Debug Mode Activated');
             log('URL', window.location.href);
             log('Referrer', document.referrer);
             log('User Agent', navigator.userAgent);
             
-            // Log Frame SDK availability
+            // Create a global debug utility so we can access it
+            window.whaleWarsDebug = {
+                log,
+                clear: () => {
+                    logs = [];
+                    debugEl.innerHTML = '';
+                }
+            };
+            
+            // Log Frame SDK availability ASAP
+            log('Frame SDK availability (initial check)', { available: !!window.frameSdk });
+            
+            // Toggle debug info visibility
+            let debugVisible = false;
+            toggleBtn.addEventListener('click', () => {
+                debugVisible = !debugVisible;
+                debugEl.style.display = debugVisible ? 'block' : 'none';
+                toggleBtn.innerText = debugVisible ? 'Hide' : 'Debug';
+            });
+            
+            // Function to attach debug elements
+            function attachDebugElements() {
+                console.log('Attaching debug elements to DOM');
+                if (document.body) {
+                    document.body.appendChild(toggleBtn);
+                    document.body.appendChild(debugEl);
+                    debugEl.style.display = 'none'; // Initially hidden
+                    log('Debug elements attached to body');
+                } else {
+                    console.log('Body not available yet, retrying in 500ms');
+                    setTimeout(attachDebugElements, 500);
+                }
+            }
+            
+            // Initial setup functions
             window.addEventListener('load', () => {
-                log('Frame SDK availability', { available: !!window.frameSdk });
+                log('Window load event fired');
+                
+                // Ensure debug elements are attached
+                attachDebugElements();
                 
                 // Check parent frame access
                 try {
@@ -791,7 +837,21 @@
                 } catch (e) {
                     log('Error sending ping to parent', { error: e.message });
                 }
+                
+                // Log Frame SDK availability again after load
+                log('Frame SDK availability (after load)', { available: !!window.frameSdk });
             });
+            
+            // Try to attach debug elements immediately if body is available
+            if (document.body) {
+                attachDebugElements();
+            } else {
+                // If document.body isn't available yet, try again when DOM is loaded
+                document.addEventListener('DOMContentLoaded', () => {
+                    log('DOM content loaded event fired');
+                    attachDebugElements();
+                });
+            }
             
             // Monitor location changes
             const originalPushState = history.pushState;
@@ -836,30 +896,11 @@
                 }
             });
             
-            // Create a global debug utility so we can access it
-            window.whaleWarsDebug = {
-                log,
-                clear: () => {
-                    logs = [];
-                    debugEl.innerHTML = '';
-                }
-            };
-            
-            // Toggle debug info visibility
-            let debugVisible = false;
-            toggleBtn.addEventListener('click', () => {
-                debugVisible = !debugVisible;
-                debugEl.style.display = debugVisible ? 'block' : 'none';
-                toggleBtn.innerText = debugVisible ? 'Hide' : 'Debug';
-            });
-            
-            document.body.appendChild(toggleBtn);
-            document.body.appendChild(debugEl);
-            debugEl.style.display = 'none'; // Initially hidden
+            return { log };
         }
         
-        // Call debug setup when page loads
-        document.addEventListener('DOMContentLoaded', debugWarpcastPreview);
+        // Initialize debugging before anything else
+        const debugLogger = debugWarpcastPreview();
 
         // Extract username from URL (for Warpcast preview tool)
         function extractUsernameFromUrl() {
@@ -1369,8 +1410,15 @@
             }
             
             function startWithAnonymousMode() {
+                window.whaleWarsDebug?.log('Starting anonymous mode with player:', window.playerInfo.name);
                 console.log('🌐 Running in anonymous mode with player:', window.playerInfo.name);
-                notifications.show('Running in anonymous mode', 'info', 3000);
+                
+                // Check if notifications system is defined before using it
+                if (typeof notifications !== 'undefined' && notifications && notifications.show) {
+                    notifications.show('Running in anonymous mode', 'info', 3000);
+                } else {
+                    console.log('Notifications system not available, skipping notification');
+                }
                 
                 // Notify the game that we're running in anonymous mode
                 if (window.onFarcasterAuth) {
@@ -1679,6 +1727,7 @@
             const wsUrl = `${wsProtocol}//${wsHost}`;
             
             console.log(`🔌 [CONNECTION] Connecting to WebSocket server at ${wsUrl}`);
+            window.whaleWarsDebug?.log('Connecting to WebSocket', { url: wsUrl });
             
             // Create WebSocket connection
             const ws = new WebSocket(wsUrl);
@@ -1691,8 +1740,17 @@
                 connectionStatus.querySelector('.status-text').textContent = 'Connecting...';
             }
             
+            // Connection retry mechanism
+            let retryCount = 0;
+            const maxRetries = 10;
+            let retryDelay = 1000; // Start with 1 second delay
+            
             // When connected, send player info with enhanced Farcaster data
             ws.addEventListener('open', () => {
+                // Reset retry counters on successful connection
+                retryCount = 0;
+                retryDelay = 1000;
+                
                 // Update connection status
                 if (connectionStatus) {
                     connectionStatus.className = 'connected';
@@ -1700,6 +1758,7 @@
                 }
                 
                 console.log('✅ [CONNECTION] Connected to server, sending player info:', window.playerInfo);
+                window.whaleWarsDebug?.log('WebSocket connected, sending player info', window.playerInfo);
                 
                 // Prepare player info message with enhanced Farcaster data
                 const playerInfoMessage = {
@@ -1721,26 +1780,59 @@
             // Handle connection errors
             ws.addEventListener('error', (error) => {
                 console.error('❌ [CONNECTION] WebSocket error:', error);
+                window.whaleWarsDebug?.log('WebSocket error', { error: error.toString() });
+                
                 if (connectionStatus) {
                     connectionStatus.className = 'disconnected';
                     connectionStatus.querySelector('.status-text').textContent = 'Error: Failed to connect';
                 }
-                notifications.show('Failed to connect to game server. Please try again later.', 'error');
+                
+                // Don't show error notification for the same error repeatedly
+                if (retryCount === 0) {
+                    if (typeof notifications !== 'undefined' && notifications && notifications.show) {
+                        notifications.show('Failed to connect to game server. Retrying...', 'error');
+                    }
+                }
             });
             
             // Handle disconnection
             ws.addEventListener('close', (event) => {
                 console.warn(`🔌 [CONNECTION] WebSocket closed: ${event.code} ${event.reason}`);
+                window.whaleWarsDebug?.log('WebSocket closed', { code: event.code, reason: event.reason });
+                
                 if (connectionStatus) {
                     connectionStatus.className = 'disconnected';
                     connectionStatus.querySelector('.status-text').textContent = 'Disconnected';
                 }
                 
-                // Attempt to reconnect after a delay
-                setTimeout(() => {
-                    console.log('🔄 [CONNECTION] Attempting to reconnect...');
-                    connectToServer();
-                }, 3000);
+                // Implement exponential backoff for reconnection
+                if (retryCount < maxRetries) {
+                    retryCount++;
+                    const actualDelay = retryDelay * (1 + 0.3 * Math.random()); // Add jitter
+                    console.log(`🔄 [CONNECTION] Attempting to reconnect in ${(actualDelay/1000).toFixed(1)}s (attempt ${retryCount}/${maxRetries})`);
+                    window.whaleWarsDebug?.log('Scheduling reconnection', { attempt: retryCount, delay: actualDelay });
+                    
+                    // Show reconnecting message after first few attempts
+                    if (retryCount >= 2 && typeof notifications !== 'undefined' && notifications && notifications.show) {
+                        notifications.show(`Reconnecting to server (attempt ${retryCount})...`, 'warning');
+                    }
+                    
+                    // Attempt to reconnect after delay
+                    setTimeout(() => {
+                        window.whaleWarsDebug?.log('Executing reconnection attempt', { attempt: retryCount });
+                        connectToServer();
+                    }, actualDelay);
+                    
+                    // Increase delay for next attempt (exponential backoff)
+                    retryDelay = Math.min(retryDelay * 1.5, 30000); // Cap at 30 seconds
+                } else {
+                    console.error('❌ [CONNECTION] Maximum reconnection attempts reached');
+                    window.whaleWarsDebug?.log('Maximum reconnection attempts reached', { maxRetries });
+                    
+                    if (typeof notifications !== 'undefined' && notifications && notifications.show) {
+                        notifications.show('Could not connect to game server after multiple attempts. Please try again later.', 'error');
+                    }
+                }
             });
             
             // Handle incoming messages
@@ -1750,6 +1842,7 @@
                     handleServerMessage(message);
                 } catch (error) {
                     console.error('❌ [MESSAGE] Failed to parse message:', error);
+                    window.whaleWarsDebug?.log('Failed to parse WebSocket message', { error: error.toString(), data: event.data });
                 }
             });
             
