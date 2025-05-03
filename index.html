@@ -708,8 +708,8 @@
     </div>
 
     <script type="module">
-        // Import the SDK from CDN for direct browser usage
-        import { sdk } from 'https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.37/dist/index.js';
+        // Update import to use a direct CDN URL instead of package name
+        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk@0.0.37/dist/index.js';
         
         // Make the SDK available globally
         window.frameSdk = sdk;
@@ -1191,6 +1191,11 @@
             
             // Set up invite button
             setupInviteButton();
+            
+            // Initialize the connection after a short delay
+            setTimeout(() => {
+                connectToServer();
+            }, 500);
         });
         
         // Automatically authenticate from Farcaster context or create anonymous player
@@ -1601,15 +1606,35 @@
 
         // Update the connection function to send enhanced player info
         function connectToServer() {
-            // ... existing connection code ...
+            // Get proper WebSocket URL based on current environment
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? `${window.location.hostname}:${window.location.port || '8080'}`
+                : window.location.host;
+            const wsUrl = `${wsProtocol}//${wsHost}`;
+            
+            console.log(`🔌 [CONNECTION] Connecting to WebSocket server at ${wsUrl}`);
+            
+            // Create WebSocket connection
+            const ws = new WebSocket(wsUrl);
+            window.gameSocket = ws;
+            
+            // Update connection status UI
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                connectionStatus.className = 'connecting';
+                connectionStatus.querySelector('.status-text').textContent = 'Connecting...';
+            }
             
             // When connected, send player info with enhanced Farcaster data
             ws.addEventListener('open', () => {
                 // Update connection status
-                connectionStatus.className = 'connected';
-                connectionStatus.querySelector('.status-text').textContent = 'Connected';
+                if (connectionStatus) {
+                    connectionStatus.className = 'connected';
+                    connectionStatus.querySelector('.status-text').textContent = 'Connected';
+                }
                 
-                console.log('Connected to server, sending player info:', window.playerInfo);
+                console.log('✅ [CONNECTION] Connected to server, sending player info:', window.playerInfo);
                 
                 // Prepare player info message with enhanced Farcaster data
                 const playerInfoMessage = {
@@ -1628,13 +1653,145 @@
                 ws.send(JSON.stringify(playerInfoMessage));
             });
             
-            // ... rest of existing connection code ...
+            // Handle connection errors
+            ws.addEventListener('error', (error) => {
+                console.error('❌ [CONNECTION] WebSocket error:', error);
+                if (connectionStatus) {
+                    connectionStatus.className = 'disconnected';
+                    connectionStatus.querySelector('.status-text').textContent = 'Error: Failed to connect';
+                }
+                notifications.show('Failed to connect to game server. Please try again later.', 'error');
+            });
+            
+            // Handle disconnection
+            ws.addEventListener('close', (event) => {
+                console.warn(`🔌 [CONNECTION] WebSocket closed: ${event.code} ${event.reason}`);
+                if (connectionStatus) {
+                    connectionStatus.className = 'disconnected';
+                    connectionStatus.querySelector('.status-text').textContent = 'Disconnected';
+                }
+                
+                // Attempt to reconnect after a delay
+                setTimeout(() => {
+                    console.log('🔄 [CONNECTION] Attempting to reconnect...');
+                    connectToServer();
+                }, 3000);
+            });
+            
+            // Handle incoming messages
+            ws.addEventListener('message', (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleServerMessage(message);
+                } catch (error) {
+                    console.error('❌ [MESSAGE] Failed to parse message:', error);
+                }
+            });
+            
+            // Setup ping interval to keep the connection alive
+            const pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+                    clearInterval(pingInterval);
+                }
+            }, 30000); // Send ping every 30 seconds
+            
+            return ws;
         }
-
+        
+        // Handle messages from the server
+        function handleServerMessage(message) {
+            console.log(`📥 [MESSAGE] Received: ${message.type}`);
+            
+            switch (message.type) {
+                case 'init':
+                    window.playerId = message.playerId;
+                    if (message.sessionToken) {
+                        localStorage.setItem('sessionToken', message.sessionToken);
+                    }
+                    console.log(`🎮 [GAME] Initialized with player ID: ${window.playerId}`);
+                    
+                    // Initialize game with received players and fish
+                    if (message.players && Array.isArray(message.players)) {
+                        updateLeaderboard(message.players);
+                    }
+                    break;
+                    
+                case 'reconnected':
+                    window.playerId = message.playerId;
+                    console.log(`🎮 [GAME] Reconnected with player ID: ${window.playerId}`);
+                    notifications.show('Reconnected to previous session!', 'success');
+                    break;
+                    
+                case 'playerJoined':
+                    // Handle new player joined event
+                    if (message.player) {
+                        // Update leaderboard with the new game state
+                        if (window.allPlayers) {
+                            window.allPlayers.push(message.player);
+                            updateLeaderboard(window.allPlayers);
+                        }
+                    }
+                    break;
+                    
+                case 'playerLeft':
+                    // Handle player left event
+                    if (message.playerId && window.allPlayers) {
+                        window.allPlayers = window.allPlayers.filter(p => p.id !== message.playerId);
+                        updateLeaderboard(window.allPlayers);
+                    }
+                    break;
+                    
+                case 'batchUpdate':
+                    // Handle batch update of player positions
+                    if (message.u && Array.isArray(message.u)) {
+                        // Store updated player data
+                        if (!window.allPlayers) window.allPlayers = [];
+                        
+                        // Update existing players with new data
+                        message.u.forEach(update => {
+                            const existingPlayerIndex = window.allPlayers.findIndex(p => p.id === update.i);
+                            if (existingPlayerIndex >= 0) {
+                                window.allPlayers[existingPlayerIndex].x = update.x;
+                                window.allPlayers[existingPlayerIndex].y = update.y;
+                                window.allPlayers[existingPlayerIndex].radius = update.r;
+                            }
+                        });
+                        
+                        // Update leaderboard with updated data
+                        updateLeaderboard(window.allPlayers);
+                    }
+                    break;
+                    
+                case 'gameState':
+                    // Handle full game state update
+                    if (message.players && Array.isArray(message.players)) {
+                        window.allPlayers = message.players;
+                        updateLeaderboard(message.players);
+                    }
+                    break;
+                    
+                case 'fishUpdate':
+                    // Handle fish update event
+                    break;
+                    
+                case 'pong':
+                    // Server responded to ping
+                    break;
+                    
+                default:
+                    console.warn(`⚠️ [MESSAGE] Unknown message type: ${message.type}`);
+            }
+        }
+        
         // Enhance leaderboard entry display to show Farcaster verification
         function updateLeaderboard(players) {
             const leaderboardEntries = document.getElementById('leaderboard-entries');
             if (!leaderboardEntries) return;
+            
+            // Store all players for future updates
+            window.allPlayers = players;
             
             // Sort players by size
             const sortedPlayers = [...players].sort((a, b) => b.radius - a.radius);
