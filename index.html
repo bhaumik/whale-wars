@@ -44,7 +44,62 @@
             z-index: 1000;
             min-width: 200px;
             backdrop-filter: blur(5px);
+            transition: transform 0.3s ease, opacity 0.3s ease;
         }
+        
+        /* Responsive layout for mobile devices */
+        @media (max-width: 768px) {
+            #leaderboard {
+                top: 10px;
+                right: 10px;
+                padding: 8px;
+                min-width: 150px;
+                font-size: 12px;
+                max-height: 30vh;
+                overflow-y: auto;
+            }
+            
+            #connection-status {
+                bottom: 60px; /* Move up to avoid being covered by fingers */
+                left: 10px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            /* Add minimize button for leaderboard on mobile */
+            #leaderboard.minimized {
+                transform: translateY(-80%);
+                opacity: 0.5;
+            }
+            
+            #leaderboard-toggle {
+                display: block;
+                position: absolute;
+                bottom: -15px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 30px;
+                height: 15px;
+                background: rgba(0, 0, 0, 0.7);
+                border-radius: 0 0 15px 15px;
+                text-align: center;
+                line-height: 15px;
+                cursor: pointer;
+            }
+            
+            /* Adjust game over screen for mobile */
+            .game-over-content {
+                width: 90%;
+                max-width: 320px;
+                padding: 15px;
+            }
+        }
+        
+        /* Add leaderboard toggle for mobile */
+        #leaderboard-toggle {
+            display: none;
+        }
+        
         #leaderboard h3 {
             margin: 0 0 8px 0;
             font-size: 16px;
@@ -59,6 +114,14 @@
             gap: 8px;
             padding: 4px 0;
             font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .player-entry {
+                grid-template-columns: 20px 28px auto 36px;
+                gap: 4px;
+                font-size: 12px;
+            }
         }
         .player-entry.current-player {
             background: rgba(255, 255, 255, 0.1);
@@ -193,6 +256,349 @@
         #start-button:hover {
             background: #4f46e5;
         }
+        
+        /* Error notification styling */
+        #notification-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            width: 80%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+        }
+        
+        .notification {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+            display: flex;
+            align-items: center;
+            pointer-events: auto;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .notification.error {
+            background: rgba(220, 53, 69, 0.9);
+        }
+        
+        .notification.warning {
+            background: rgba(255, 193, 7, 0.9);
+            color: #212529;
+        }
+        
+        .notification.success {
+            background: rgba(40, 167, 69, 0.9);
+        }
+        
+        .notification .icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .notification .close {
+            margin-left: auto;
+            cursor: pointer;
+            opacity: 0.7;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 4px;
+        }
+        
+        .notification .close:hover {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            #notification-container {
+                top: 60px;
+                width: 90%;
+            }
+            
+            .notification {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Achievement system styling */
+        #achievements-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
+        .achievement {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid gold;
+            border-radius: 10px;
+            padding: 12px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(120%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+        }
+        
+        .achievement.show {
+            transform: translateX(0);
+        }
+        
+        .achievement-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ffd700, #ffb700);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .achievement-content {
+            flex: 1;
+        }
+        
+        .achievement-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .achievement-description {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .achievement-share {
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: background 0.2s;
+        }
+        
+        .achievement-share:hover {
+            background: #4f46e5;
+        }
+        
+        @media (max-width: 768px) {
+            #achievements-container {
+                bottom: 70px;
+                right: 10px;
+            }
+            
+            .achievement {
+                padding: 8px;
+                gap: 8px;
+                max-width: 250px;
+            }
+            
+            .achievement-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 16px;
+            }
+            
+            .achievement-title {
+                font-size: 14px;
+            }
+            
+            .achievement-description {
+                font-size: 12px;
+            }
+        }
+        
+        /* Farcaster sharing modal */
+        #share-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .share-modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .share-preview {
+            width: 100%;
+            aspect-ratio: 1.91/1;
+            background: #f0f0f0;
+            margin: 15px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .share-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .share-button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .share-button.primary {
+            background: #6366f1;
+            color: white;
+        }
+        
+        .share-button.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        /* Game over screen with sharing */
+        .game-over-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .game-over-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-over-header {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .game-over-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 10px;
+        }
+        
+        .stat-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .game-over-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .game-over-share {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .share-title {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .game-over-content {
+                padding: 20px;
+                max-width: 400px;
+            }
+            
+            .game-over-header {
+                font-size: 24px;
+                margin-bottom: 15px;
+            }
+            
+            .game-over-stats {
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            
+            .stat-card {
+                padding: 10px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -201,6 +607,7 @@
             <div id="leaderboard">
                 <h3>Leaderboard</h3>
                 <div id="leaderboard-entries"></div>
+                <div id="leaderboard-toggle">▼</div>
             </div>
             <canvas id="game-canvas"></canvas>
             <div id="score" role="status" aria-live="polite">Size: 20</div>
@@ -210,1301 +617,653 @@
             </div>
         </div>
     </div>
+    
+    <!-- Notification container for user feedback -->
+    <div id="notification-container"></div>
+    
+    <!-- Achievement notification container -->
+    <div id="achievements-container"></div>
+    
+    <!-- Game over screen with sharing -->
+    <div class="game-over-screen">
+        <div class="game-over-content">
+            <div class="game-over-header">Game Over</div>
+            <div class="game-over-stats">
+                <div class="stat-card">
+                    <div class="stat-title">Final Size</div>
+                    <div class="stat-value" id="final-size">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Survival Time</div>
+                    <div class="stat-value" id="survival-time">0s</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Fish Eaten</div>
+                    <div class="stat-value" id="fish-eaten">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Players Eaten</div>
+                    <div class="stat-value" id="players-eaten">0</div>
+                </div>
+            </div>
+            <div class="game-over-actions">
+                <button class="share-button primary" id="share-game-stats">Share to Farcaster</button>
+                <button class="share-button secondary" id="restart-game">Play Again</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Farcaster sharing modal -->
+    <div id="share-modal">
+        <div class="share-modal-content">
+            <h3>Share your achievement</h3>
+            <div class="share-preview">
+                <img id="share-preview-image" src="" alt="Achievement preview">
+            </div>
+            <div class="share-buttons">
+                <button class="share-button primary" id="share-to-farcaster">Share to Farcaster</button>
+                <button class="share-button secondary" id="share-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
         
-        // Enhanced Logger class
-        class Logger {
-            constructor(options = {}) {
-                this.options = {
-                    enableConsole: true,
-                    logLevel: 'info',
-                    maxLogEntries: 100,
-                    ...options
-                };
-                
-                this.logLevels = {
-                    error: 0,
-                    warn: 1,
-                    info: 2,
-                    debug: 3,
-                    trace: 4
-                };
-                
-                this.emojis = {
-                    WORLD: '🌍',
-                    PLAYER: '👤',
-                    DEATH: '💀',
-                    RESPAWN: '🔄',
-                    WEBSOCKET: '🔌',
-                    ERROR: '❌',
-                    FLEX: '🎮',
-                    STATE: '📊',
-                    FARCASTER: '📱',
-                    PHYSICS: '🔧',
-                    UI: '🎨',
-                    PERFORMANCE: '📊'
-                };
-                
-                // Store logs in memory for potential export/debugging
-                this.logs = [];
-            }
+        // Function to enhance mobile UI
+        function setupMobileUI() {
+            // Setup leaderboard toggle for mobile
+            const leaderboardToggle = document.getElementById('leaderboard-toggle');
+            const leaderboard = document.getElementById('leaderboard');
             
-            log(level, category, message, data = {}) {
-                // Check if we should log this level
-                if (!this.shouldLog(level)) return;
+            if (leaderboardToggle && leaderboard) {
+                leaderboardToggle.addEventListener('click', (e) => {
+                    leaderboard.classList.toggle('minimized');
+                    leaderboardToggle.textContent = leaderboard.classList.contains('minimized') ? '▲' : '▼';
+                    e.stopPropagation();
+                });
                 
-                const timestamp = new Date().toISOString();
-                const emoji = this.emojis[category] || '📝';
-                
-                const logEntry = {
-                    timestamp,
-                    level,
-                    category,
-                    message,
-                    data
-                };
-                
-                // Add to in-memory logs with rotation
-                this.logs.push(logEntry);
-                if (this.logs.length > this.options.maxLogEntries) {
-                    this.logs.shift();
-                }
-                
-                // Log to console if enabled
-                if (this.options.enableConsole) {
-                    const levelColors = {
-                        error: 'color: #e74c3c; font-weight: bold',
-                        warn: 'color: #f39c12; font-weight: bold',
-                        info: 'color: #3498db',
-                        debug: 'color: #2ecc71',
-                        trace: 'color: #95a5a6'
-                    };
-                    
-                    const formattedTime = timestamp.split('T')[1].split('.')[0];
-                    const styleLevel = levelColors[level] || '';
-                    
-                    console.groupCollapsed(
-                        `%c${formattedTime}%c ${emoji} [${category}] %c${level.toUpperCase()}%c ${message}`,
-                        'color: #7f8c8d; font-weight: normal',
-                        'color: inherit; font-weight: normal',
-                        styleLevel,
-                        'color: inherit; font-weight: normal'
-                    );
-                    
-                    if (Object.keys(data).length > 0) {
-                        console.log(data);
+                // Clicking on the leaderboard itself will maximize it
+                leaderboard.addEventListener('click', () => {
+                    if (leaderboard.classList.contains('minimized')) {
+                        leaderboard.classList.remove('minimized');
+                        leaderboardToggle.textContent = '▼';
                     }
-                    
-                    console.groupEnd();
+                });
+            }
+            
+            // Add double-tap detection for game functions on mobile
+            let lastTap = 0;
+            document.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                
+                if (tapLength < 300 && tapLength > 0) {
+                    // Double tap detected
+                    const gameOverScreen = document.querySelector('.game-over-screen');
+                    if (gameOverScreen && gameOverScreen.style.display === 'block') {
+                        // Click the game over screen to restart
+                        gameOverScreen.click();
+                    }
                 }
-                
-                return logEntry;
-            }
+                lastTap = currentTime;
+            });
             
-            error(category, message, data = {}) {
-                return this.log('error', category, message, data);
-            }
-            
-            warn(category, message, data = {}) {
-                return this.log('warn', category, message, data);
-            }
-            
-            info(category, message, data = {}) {
-                return this.log('info', category, message, data);
-            }
-            
-            debug(category, message, data = {}) {
-                return this.log('debug', category, message, data);
-            }
-            
-            trace(category, message, data = {}) {
-                return this.log('trace', category, message, data);
-            }
-            
-            shouldLog(level) {
-                return this.logLevels[level] <= this.logLevels[this.options.logLevel];
-            }
-            
-            getLogEntries(options = {}) {
-                const { level, category, limit } = options;
-                
-                let filtered = [...this.logs];
-                
-                if (level) {
-                    filtered = filtered.filter(entry => 
-                        this.logLevels[entry.level] <= this.logLevels[level]
-                    );
-                }
-                
-                if (category) {
-                    filtered = filtered.filter(entry => entry.category === category);
-                }
-                
-                if (limit) {
-                    filtered = filtered.slice(-limit);
-                }
-                
-                return filtered;
-            }
-            
-            exportLogs() {
-                return JSON.stringify(this.logs);
-            }
-            
-            clearLogs() {
-                this.logs = [];
+            // Check if device is mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                document.body.classList.add('mobile-device');
             }
         }
         
-        class Game {
-            constructor(canvas, user) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.gameLoop = null;
-                this.lastTime = 0;
-                this.fish = new Map();
-                this.players = new Map();
-                this.playerId = null;
-                this.mouseX = 0;
-                this.mouseY = 0;
-                this.keys = new Set();
-                this.ws = null;
-                this.reconnectAttempts = 0;
-                this.user = user;
-                
-                // Configure WebSocket URL based on environment
-                this.serverUrl = window.location.hostname === 'localhost' 
-                    ? `ws://${window.location.hostname}:8080`
-                    : `wss://${window.location.hostname}`;
-                
-                // Store user info for WebSocket connection and display
-                this.playerInfo = {
-                    name: user?.displayName || user?.username || 'Anonymous',
-                    fid: user?.fid || null,
-                    avatar: user?.pfpUrl || '/icon.png'
-                };
-                console.log('🎮 Game constructed with player info:', this.playerInfo);
-                
-                // Initialize leaderboard
-                this.leaderboardEl = document.getElementById('leaderboard-entries');
-                if (!this.leaderboardEl) {
-                    console.error('❌ Could not find leaderboard element');
-                    return;
-                }
-                
-                // World bounds
-                this.worldBounds = {
-                    width: 20000,
-                    height: 20000
-                };
-
-                // Camera/viewport
-                this.camera = {
-                    x: 0,
-                    y: 0,
-                    scale: 1,
-                    baseScale: 1,
-                    minScale: 0.15,  // Allow more zoom out for larger world
-                    maxScale: 1
-                };
-
-                // Add danger zone properties
-                this.dangerZone = {
-                    width: 1000,  // Width of danger zone from edge
-                    active: false,
-                    intensity: 0,
-                    falling: false,
-                    fallStartTime: 0,
-                    fallDuration: 2000  // 2 seconds for fall animation
-                };
-
-                // Add death type and killer tracking
-                this.deathType = null; // 'eaten' or 'fell'
-                this.killerInfo = null; // Store who ate the player
-
-                // Create overlay canvas for effects
-                this.overlayCanvas = document.createElement('canvas');
-                this.overlayCanvas.style.position = 'absolute';
-                this.overlayCanvas.style.top = '0';
-                this.overlayCanvas.style.left = '0';
-                this.overlayCanvas.style.width = '100%';
-                this.overlayCanvas.style.height = '100%';
-                this.overlayCanvas.style.pointerEvents = 'none';
-                document.getElementById('game-area').appendChild(this.overlayCanvas);
-                this.overlayCtx = this.overlayCanvas.getContext('2d');
-
-                // Create game over screen
-                this.gameOverScreen = document.createElement('div');
-                this.gameOverScreen.style.position = 'absolute';
-                this.gameOverScreen.style.top = '50%';
-                this.gameOverScreen.style.left = '50%';
-                this.gameOverScreen.style.transform = 'translate(-50%, -50%)';
-                this.gameOverScreen.style.textAlign = 'center';
-                this.gameOverScreen.style.color = 'white';
-                this.gameOverScreen.style.fontFamily = 'Comic Sans MS, cursive';
-                this.gameOverScreen.style.fontSize = '48px';
-                this.gameOverScreen.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
-                this.gameOverScreen.style.display = 'none';
-                this.gameOverScreen.style.width = '100%';
-                this.gameOverScreen.style.maxWidth = '600px';
-                this.gameOverScreen.style.padding = '20px';
-                this.updateGameOverScreen();
-                document.getElementById('game-area').appendChild(this.gameOverScreen);
-
-                // Initialize event listeners
-                window.addEventListener('mousemove', this.handleMouseMove.bind(this));
-                window.addEventListener('keydown', this.handleKeyDown.bind(this));
-                window.addEventListener('keyup', this.handleKeyUp.bind(this));
-                
-                // Add touch input handling for mobile devices
-                this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this));
-                this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this));
-                this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this));
-                
-                // Track touch state
-                this.touchActive = false;
-                this.touchX = 0;
-                this.touchY = 0;
-
-                // Resize handler
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
-
-                // Add avatar cache
-                this.avatarCache = new Map();
-                
-                // Add image loading utility
-                this.loadImage = (url) => {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.crossOrigin = "anonymous";  // Enable CORS
-                        img.onload = () => resolve(img);
-                        img.onerror = () => {
-                            console.warn(`Failed to load avatar: ${url}`);
-                            reject(new Error(`Failed to load avatar: ${url}`));
-                        };
-                        img.src = url;
-                    });
-                };
-
-                // Performance monitoring
-                this.metrics = {
-                    fps: 0,
-                    frameTime: 0,
-                    messageCount: 0,
-                    bytesSent: 0,
-                    bytesReceived: 0,
-                    lastMetricsTime: Date.now()
-                };
-                
-                // Log metrics every 5 seconds
-                setInterval(() => {
-                    const now = Date.now();
-                    const timeWindow = (now - this.metrics.lastMetricsTime) / 1000;
-                    console.log('📊 [CLIENT] Performance Report:');
-                    console.log(`- FPS: ${this.metrics.fps.toFixed(1)}`);
-                    console.log(`- Frame Time: ${this.metrics.frameTime.toFixed(1)}ms`);
-                    console.log(`- Messages/sec: ${(this.metrics.messageCount / timeWindow).toFixed(1)}`);
-                    console.log(`- Bandwidth/sec: ${((this.metrics.bytesSent + this.metrics.bytesReceived) / timeWindow / 1024).toFixed(1)} KB`);
-                    
-                    // Reset counters
-                    this.metrics.messageCount = 0;
-                    this.metrics.bytesSent = 0;
-                    this.metrics.bytesReceived = 0;
-                    this.metrics.lastMetricsTime = now;
-                }, 5000);
-
-                // Add player states
-                this.playerStates = {
-                    ALIVE: 'alive',
-                    DEAD: 'dead'
-                };
-                
-                // Add player state
-                this.playerState = this.playerStates.ALIVE;
-
-                this.debugMode = true; // Enable debug logging
-
-                // Add connection monitoring
-                this.pingInterval = null;
-                this.lastPingTime = 0;
-                this.pingTimeout = null;
-                
-                // Enhanced logging system
-                this.logger = new Logger({
-                    enableConsole: true,
-                    logLevel: 'debug',
-                    maxLogEntries: 100
-                });
-            }
-
-            log(type, message, data = {}) {
-                // Forward to enhanced logger
-                const level = type === 'ERROR' ? 'error' : 
-                    (type === 'WEBSOCKET' || type === 'WORLD') ? 'info' : 'debug';
-                    
-                this.logger.log(level, type, message, data);
-            }
-
-            start() {
-                this.log('WORLD', 'Starting game...');
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.log('WEBSOCKET', 'Already connected, skipping connection');
-                    return;
-                }
-
-                this.ws = new WebSocket(this.serverUrl);
-                this.log('WEBSOCKET', 'Connecting to server...', { url: this.serverUrl });
-
-                this.ws.onopen = () => {
-                    this.log('WEBSOCKET', 'Connected to server');
-                    this.sendPlayerInfo();
-                };
-
-                this.ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    this.log('WEBSOCKET', 'Received message', { type: data.type });
-
-                    switch (data.type) {
-                        case 'init':
-                            this.log('WORLD', 'Initializing game state', {
-                                playerId: data.playerId,
-                                playerCount: data.players.length,
-                                fishCount: data.fish.length
-                            });
-                            // ... rest of init code ...
-                            break;
-                        case 'pong':
-                            // Server responded to our ping
-                            const pingTime = Date.now() - this.lastPingTime;
-                            console.log(`🌐 [WEBSOCKET] Ping: ${pingTime}ms`);
-                            // Update connection status with ping time if connected
-                            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                                this.updateConnectionStatus('connected', `Connected (${pingTime}ms)`);
-                            }
-                            break;
-                        // ... other cases ...
-                    }
-                };
-
-                this.ws.onclose = () => {
-                    this.log('WEBSOCKET', 'Disconnected from server');
-                };
-
-                this.ws.onerror = (error) => {
-                    this.log('ERROR', 'WebSocket error:', error);
-                };
-            }
-
-            connectToServer() {
-                // Use dynamic WebSocket URL based on environment
-                const wsUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                    ? `ws://${window.location.hostname}:8080`
-                    : `wss://${window.location.hostname}`;
-                
-                // Update the connection status UI
-                this.updateConnectionStatus('connecting');
-                
-                // Close existing connection if any
-                if (this.ws) {
-                    this.logger.info('WEBSOCKET', 'Closing existing connection', { readyState: this.ws.readyState });
-                    this.ws.close();
-                    this.ws = null;
-                }
-                
-                this.logger.info('WEBSOCKET', 'Connecting to server', { url: wsUrl });
-                
-                // Create new WebSocket with error handling
-                try {
-                    this.ws = new WebSocket(wsUrl);
-                    
-                    // Add connection timeout - shorter for mobile networks
-                    const timeoutDuration = this.isMobileNetwork() ? 5000 : 10000;
-                    this.connectionTimeout = setTimeout(() => {
-                        if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-                            this.logger.error('WEBSOCKET', 'Connection timeout');
-                            this.ws.close();
-                            this.updateConnectionStatus('disconnected');
-                        }
-                    }, timeoutDuration);
-                    
-                    this.ws.onopen = () => {
-                        this.logger.info('WEBSOCKET', 'Connected successfully');
-                        clearTimeout(this.connectionTimeout);
-                        this.reconnectAttempts = 0;
-                        this.updateConnectionStatus('connected');
-                        
-                        this.logger.debug('WEBSOCKET', 'Sending player info', { playerInfo: this.playerInfo });
-                        this.ws.send(JSON.stringify({
-                            type: 'playerInfo',
-                            name: this.playerInfo.name,
-                            fid: this.playerInfo.fid,
-                            avatar: this.playerInfo.avatar
-                        }));
-                        
-                        // Start ping interval to keep connection alive
-                        this.startPingInterval();
-                    };
-
-                    this.ws.onmessage = (event) => {
-                        this.metrics.messageCount++;
-                        this.metrics.bytesReceived += event.data.length;
-                        
-                        try {
-                            const data = JSON.parse(event.data);
-                            this.logger.debug('WEBSOCKET', `Received message: ${data.type}`);
-                            
-                            switch (data.type) {
-                                case 'init':
-                                    this.playerId = data.playerId;
-                                    this.players.clear();
-                                    this.fish.clear();
-                                    // Ensure our player has the correct name
-                                    data.players.forEach(player => {
-                                        if (player.id === this.playerId) {
-                                            player.name = this.playerInfo.name;
-                                        }
-                                        this.players.set(player.id, player);
-                                    });
-                                    data.fish.forEach(fish => {
-                                        this.fish.set(fish.id, fish);
-                                    });
-                                    this.logger.info('WORLD', 'Game state initialized', {
-                                        playerId: this.playerId,
-                                        playerCount: this.players.size,
-                                        fishCount: this.fish.size
-                                    });
-                                    break;
-                                    
-                                case 'pong':
-                                    // Server responded to our ping
-                                    const pingTime = Date.now() - this.lastPingTime;
-                                    this.logger.debug('WEBSOCKET', `Ping: ${pingTime}ms`);
-                                    // Update connection status with ping time if connected
-                                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                                        this.updateConnectionStatus('connected', `Connected (${pingTime}ms)`);
-                                    }
-                                    break;
-
-                                case 'playerJoined':
-                                    this.players.set(data.player.id, data.player);
-                                    break;
-
-                                case 'playerLeft':
-                                    this.players.delete(data.playerId);
-                                    break;
-
-                                case 'playerMoved':
-                                    if (data.player.id !== this.playerId) {
-                                        this.players.set(data.player.id, data.player);
-                                    }
-                                    break;
-
-                                case 'playerUpdated':
-                                    if (data.player.id !== this.playerId) {
-                                        this.players.set(data.player.id, data.player);
-                                    }
-                                    break;
-
-                                case 'fishUpdate':
-                                    this.fish.delete(data.eaten);
-                                    this.fish.set(data.new.id, data.new);
-                                    break;
-
-                                case 'batchUpdate':
-                                    // Handle batched position updates
-                                    data.u.forEach(update => {
-                                        if (update.id !== this.playerId) {
-                                            const player = this.players.get(update.id);
-                                            if (player) {
-                                                player.x = update.x;
-                                                player.y = update.y;
-                                                player.radius = update.r;
-                                            }
-                                        }
-                                    });
-                                    break;
-
-                                case 'playerDied':
-                                    const deadPlayer = this.players.get(data.playerId);
-                                    if (deadPlayer) {
-                                        deadPlayer.state = this.playerStates.DEAD;
-                                        deadPlayer.deathType = data.deathType;
-                                        deadPlayer.killedBy = data.killedBy;
-                                    }
-                                    break;
-
-                                case 'playerRespawned':
-                                    if (data.player) {
-                                        this.players.set(data.player.id, data.player);
-                                    }
-                                    break;
-                            }
-                        } catch (error) {
-                            this.logger.error('WEBSOCKET', 'Error processing message', { error: error.message });
-                        }
-                    };
-
-                    this.ws.onclose = (event) => {
-                        this.logger.info('WEBSOCKET', 'Disconnected', { 
-                            code: event.code, 
-                            reason: event.reason,
-                            wasClean: event.wasClean
-                        });
-                        clearTimeout(this.connectionTimeout);
-                        this.stopPingInterval();
-                        this.ws = null;
-                        this.updateConnectionStatus('disconnected');
-                        
-                        // Exponential backoff with jitter for reconnection
-                        const baseDelay = 1000; // 1 second base
-                        const maxDelay = 30000; // 30 seconds max
-                        const jitter = Math.random() * 0.3; // 0-30% jitter
-                        
-                        const backoffDelay = Math.min(
-                            baseDelay * Math.pow(1.5, this.reconnectAttempts || 0) * (1 + jitter),
-                            maxDelay
-                        );
-                        
-                        this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
-                        
-                        this.logger.info('WEBSOCKET', 'Scheduling reconnection', {
-                            attempt: this.reconnectAttempts,
-                            delay: Math.round(backoffDelay)
-                        });
-                        this.updateConnectionStatus('connecting', `Reconnecting (${this.reconnectAttempts})...`);
-                        
-                        setTimeout(() => this.connectToServer(), backoffDelay);
-                    };
-
-                    this.ws.onerror = (error) => {
-                        this.logger.error('WEBSOCKET', 'Connection error', { error });
-                        // Don't update status here, onclose will be called
-                    };
-                } catch (error) {
-                    this.logger.error('WEBSOCKET', 'Connection creation error', { error: error.message });
-                    this.updateConnectionStatus('disconnected');
-                    
-                    // Try to reconnect after a short delay
-                    setTimeout(() => this.connectToServer(), 3000);
-                }
-            }
+        // Notification system for user feedback
+        const notifications = {
+            container: null,
             
-            updateConnectionStatus(status, message) {
-                const statusElement = document.getElementById('connection-status');
-                if (!statusElement) return;
-                
-                // Remove all status classes
-                statusElement.classList.remove('connected', 'connecting', 'disconnected');
-                
-                // Add the appropriate class
-                statusElement.classList.add(status);
-                
-                // Update the text
-                const statusTextElement = statusElement.querySelector('.status-text');
-                if (statusTextElement) {
-                    switch (status) {
-                        case 'connected':
-                            statusTextElement.textContent = message || 'Connected';
-                            break;
-                        case 'connecting':
-                            statusTextElement.textContent = message || 'Connecting...';
-                            break;
-                        case 'disconnected':
-                            statusTextElement.textContent = message || 'Disconnected';
-                            break;
-                    }
-                }
-            }
-
-            updatePlayerPosition(deltaTime) {
-                const player = this.players.get(this.playerId);
-                if (!player || this.dangerZone.falling) return;
-
-                // More natural logarithmic camera scaling
-                const baseSize = 20;  // Starting size
-                let targetScale = 1;
-                
-                if (player.radius > baseSize) {
-                    // Logarithmic scaling formula similar to Agar.io
-                    targetScale = 1 / (1 + Math.log10(player.radius / baseSize));
-                    targetScale = Math.max(this.camera.minScale, Math.min(this.camera.maxScale, targetScale));
-                }
-                
-                // Smooth transition (1% per frame for very smooth scaling)
-                this.camera.scale = this.camera.scale + (targetScale - this.camera.scale) * 0.01;
-
-                // More aggressive speed reduction for larger sizes
-                const baseSpeed = 5;
-                // More aggressive speed reduction using square of logarithm
-                const speedFactor = 1 / (Math.log10(Math.max(10, player.radius / 10)) ** 1.5);
-                const speed = baseSpeed * speedFactor * (60 / (1000 / deltaTime)) * (1 / this.camera.scale);
-
-                let dx = 0;
-                let dy = 0;
-
-                // Keyboard movement
-                if (this.keys.has('w') || this.keys.has('arrowup')) dy -= speed;
-                if (this.keys.has('s') || this.keys.has('arrowdown')) dy += speed;
-                if (this.keys.has('a') || this.keys.has('arrowleft')) dx -= speed;
-                if (this.keys.has('d') || this.keys.has('arrowright')) dx += speed;
-
-                // Mouse movement with more gradual acceleration
-                if (!dx && !dy) {
-                    const targetX = this.mouseX + this.camera.x;
-                    const targetY = this.mouseY + this.camera.y;
-                    const angle = Math.atan2(targetY - player.y, targetX - player.x);
-                    // Add gradual acceleration based on distance
-                    const distanceToTarget = Math.sqrt(
-                        (targetX - player.x) * (targetX - player.x) + 
-                        (targetY - player.y) * (targetY - player.y)
-                    );
-                    const accelerationFactor = Math.min(1, distanceToTarget / (player.radius * 4));
-                    dx = Math.cos(angle) * speed * accelerationFactor;
-                    dy = Math.sin(angle) * speed * accelerationFactor;
-                }
-
-                // Check for danger zone
-                const margin = this.dangerZone.width;
-                const distanceToEdgeX = Math.min(
-                    player.x - player.radius,
-                    this.worldBounds.width - (player.x + player.radius)
-                );
-                const distanceToEdgeY = Math.min(
-                    player.y - player.radius,
-                    this.worldBounds.height - (player.y + player.radius)
-                );
-                const minDistance = Math.min(distanceToEdgeX, distanceToEdgeY);
-
-                if (minDistance < margin) {
-                    this.dangerZone.active = true;
-                    this.dangerZone.intensity = 1 - (minDistance / margin);
-                    
-                    // Start falling if player is completely beyond the boundary
-                    if (minDistance < -player.radius * 2) {
-                        this.startFalling();
-                        return;
-                    }
-                } else {
-                    this.dangerZone.active = false;
-                    this.dangerZone.intensity = 0;
-                }
-
-                // Allow movement without bounds
-                player.x = player.x + dx;
-                player.y = player.y + dy;
-
-                // Update camera position with scaling
-                this.camera.x = player.x - (this.canvas.width / 2) / this.camera.scale;
-                this.camera.y = player.y - (this.canvas.height / 2) / this.camera.scale;
-
-                // Send position update to server with delta compression
-                if (dx !== 0 || dy !== 0) {
-                    const updateMessage = JSON.stringify({
-                        type: 'updatePlayer',
-                        x: Math.round(player.x * 10) / 10, // Round to 1 decimal
-                        y: Math.round(player.y * 10) / 10,
-                        radius: Math.round(player.radius)
-                    });
-                    
-                    this.ws.send(updateMessage);
-                    this.metrics.messageCount++;
-                    this.metrics.bytesSent += updateMessage.length;
-                }
-            }
-
-            checkCollisions() {
-                const player = this.players.get(this.playerId);
-                if (!player) return;
-
-                this.fish.forEach((fish, fishId) => {
-                    const dx = player.x - fish.x;
-                    const dy = player.y - fish.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < player.radius + fish.radius) {
-                        if (player.radius > fish.radius * 1.1) {
-                            // Calculate areas
-                            const playerArea = Math.PI * player.radius * player.radius;
-                            const fishArea = Math.PI * fish.radius * fish.radius;
-                            
-                            // Growth factor decreases as player gets bigger
-                            const growthFactor = 0.5 / Math.log10(Math.max(10, player.radius));
-                            
-                            // New area based on absorbed fish
-                            const newArea = playerArea + (fishArea * growthFactor);
-                            
-                            // Convert back to radius
-                            player.radius = Math.sqrt(newArea / Math.PI);
-                            
-                            this.ws.send(JSON.stringify({
-                                type: 'fishEaten',
-                                fishId: fishId
-                            }));
-                            document.getElementById('score').textContent = `Size: ${Math.round(player.radius)}`;
-                        }
-                    }
-                });
-            }
-
-            updateLeaderboard() {
-                if (!this.leaderboardEl) return;  // Skip if element not found
-                
-                // Sort players by size
-                const sortedPlayers = Array.from(this.players.values())
-                    .sort((a, b) => b.radius - a.radius);
-                
-                // Find current player's rank
-                const currentPlayerRank = sortedPlayers.findIndex(p => p.id === this.playerId) + 1;
-                
-                // Get top 5 players
-                const topPlayers = sortedPlayers.slice(0, 5);
-                
-                // Clear current leaderboard
-                this.leaderboardEl.innerHTML = '';
-                
-                // Add top 5 players
-                topPlayers.forEach((player, index) => {
-                    const isCurrentPlayer = player.id === this.playerId;
-                    this.addLeaderboardEntry(index + 1, player, isCurrentPlayer);
-                });
-                
-                // If current player is not in top 5, add them at their position
-                if (currentPlayerRank > 5 && this.playerId) {
-                    const currentPlayer = this.players.get(this.playerId);
-                    if (currentPlayer) {
-                        // Add divider
-                        const divider = document.createElement('div');
-                        divider.className = 'divider';
-                        divider.textContent = '...';
-                        this.leaderboardEl.appendChild(divider);
-                        
-                        // Add current player's entry
-                        this.addLeaderboardEntry(currentPlayerRank, currentPlayer, true);
-                    }
-                }
-            }
-
-            addLeaderboardEntry(rank, player, isCurrentPlayer) {
-                const entry = document.createElement('div');
-                entry.className = `player-entry${isCurrentPlayer ? ' current-player' : ''}`;
-                
-                const rankEl = document.createElement('div');
-                rankEl.className = 'rank';
-                rankEl.textContent = `${rank}.`;
-                
-                const avatarEl = document.createElement('img');
-                avatarEl.className = 'avatar';
-                avatarEl.src = player.avatar || '/icon.png?v=1';
-                avatarEl.alt = `${player.name}'s avatar`;
-                avatarEl.onerror = () => {
-                    avatarEl.src = '/icon.png?v=1';
-                };
-                
-                const nameEl = document.createElement('div');
-                nameEl.className = 'name';
-                nameEl.textContent = player.name;
-                
-                const scoreEl = document.createElement('div');
-                scoreEl.className = 'score';
-                scoreEl.textContent = Math.round(player.radius);
-                
-                entry.appendChild(rankEl);
-                entry.appendChild(avatarEl);
-                entry.appendChild(nameEl);
-                entry.appendChild(scoreEl);
-                
-                this.leaderboardEl.appendChild(entry);
-            }
-
-            draw() {
-                if (!this.ctx || !this.canvas) return;
-                
-                // Update leaderboard
-                this.updateLeaderboard();
-                
-                // Clear canvas with background
-                this.ctx.fillStyle = '#87CEEB';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // Save context for camera transform
-                this.ctx.save();
-                
-                // Apply camera transform with scale
-                this.ctx.scale(this.camera.scale, this.camera.scale);
-                this.ctx.translate(-this.camera.x, -this.camera.y);
-                
-                // Draw world bounds
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(0, 0, this.worldBounds.width, this.worldBounds.height);
-
-                // Draw grid with larger spacing
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-                this.ctx.lineWidth = 0.5;
-                const gridSize = 400;  // Larger grid size for bigger map
-                for (let x = 0; x < this.worldBounds.width; x += gridSize) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, 0);
-                    this.ctx.lineTo(x, this.worldBounds.height);
-                    this.ctx.stroke();
-                }
-                for (let y = 0; y < this.worldBounds.height; y += gridSize) {
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(0, y);
-                    this.ctx.lineTo(this.worldBounds.width, y);
-                    this.ctx.stroke();
-                }
-                
-                // Draw fish
-                this.fish.forEach(fish => {
-                    if (!fish) return;
-                    this.ctx.fillStyle = fish.color;
-                    this.ctx.beginPath();
-                    this.ctx.arc(fish.x, fish.y, fish.radius, 0, Math.PI * 2);
-                    this.ctx.fill();
-                });
-                
-                // Draw players
-                this.players.forEach(player => {
-                    if (!player) return;
-                    
-                    // Draw player avatar or fallback circle
-                    this.ctx.save();
-                    this.ctx.beginPath();
-                    this.ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-                    this.ctx.clip();
-                    
-                    const avatar = this.avatarCache.get(player.id);
-                    if (avatar) {
-                        // Calculate source dimensions for square crop
-                        const sourceSize = Math.min(avatar.width, avatar.height);
-                        const sourceX = (avatar.width - sourceSize) / 2;
-                        const sourceY = (avatar.height - sourceSize) / 2;
-                        
-                        // Draw avatar with square crop
-                        const size = player.radius * 2;
-                        this.ctx.drawImage(avatar,
-                            sourceX, sourceY, sourceSize, sourceSize,  // Source (crop)
-                            player.x - player.radius,                  // Dest x
-                            player.y - player.radius,                  // Dest y
-                            size, size                                // Dest size
-                        );
-                    } else {
-                        // Fallback to colored circle
-                        this.ctx.fillStyle = player.color;
-                        this.ctx.fillRect(
-                            player.x - player.radius,
-                            player.y - player.radius,
-                            player.radius * 2,
-                            player.radius * 2
-                        );
-                        
-                        // Try to load avatar if we haven't yet
-                        if (player.avatar) {
-                            this.loadPlayerAvatar(player.id, player.avatar);
-                        }
-                    }
-                    this.ctx.restore();
-                    
-                    // Draw player name above avatar
-                    if (player.name) {
-                        // Calculate font size based on radius (with reasonable limits)
-                        const baseFontSize = Math.min(player.radius * 0.6, Math.max(12, player.radius * 0.3));
-                        this.ctx.font = `bold ${baseFontSize}px -apple-system, BlinkMacSystemFont, Arial`;
-                        
-                        // Set text style for better visibility
-                        this.ctx.fillStyle = 'white';
-                        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-                        this.ctx.lineWidth = baseFontSize * 0.2;
-                        this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'bottom';
-                        
-                        // Draw name above circle with padding
-                        const textY = player.y - player.radius - (baseFontSize * 0.3);
-                        this.ctx.strokeText(player.name, player.x, textY);
-                        this.ctx.fillText(player.name, player.x, textY);
-                    }
-                });
-                
-                this.ctx.restore();
-            }
-
-            update(time) {
-                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-                    this.log('ERROR', 'Update skipped - WebSocket not ready');
+            // Initialize notification system
+            init() {
+                this.container = document.getElementById('notification-container');
+                if (!this.container) {
+                    console.error('Notification container not found');
                     return;
                 }
-
-                // Calculate delta time
-                if (!this.lastTime) this.lastTime = time;
-                const deltaTime = time - this.lastTime;
-                this.lastTime = time;
-
-                // Update player position if alive
-                const player = this.players.get(this.playerId);
-                if (player && player.state === this.playerStates.ALIVE) {
-                    this.log('STATE', 'Updating player position', {
-                        id: this.playerId,
-                        position: { x: player.x, y: player.y },
-                        velocity: { x: player.velocityX, y: player.velocityY }
-                    });
-
-                    // Update position based on velocity
-                    player.x += player.velocityX * deltaTime;
-                    player.y += player.velocityY * deltaTime;
-
-                    // Send position update to server
-                    this.ws.send(JSON.stringify({
-                        type: 'playerUpdate',
-                        x: player.x,
-                        y: player.y,
-                        velocityX: player.velocityX,
-                        velocityY: player.velocityY
-                    }));
-                }
-
-                // Update danger zone if active
-                if (this.dangerZone.active) {
-                    this.log('STATE', 'Danger zone active', {
-                        width: this.dangerZone.width,
-                        intensity: this.dangerZone.intensity,
-                        falling: this.dangerZone.falling
-                    });
-                    this.updateDangerZone(deltaTime);
-                }
-
-                // Render world
-                this.render();
-
-                // Continue game loop
-                this.gameLoop = requestAnimationFrame(time => this.update(time));
-            }
-
-            updateDangerZone(deltaTime) {
-                if (this.dangerZone.falling) {
-                    const elapsed = Date.now() - this.dangerZone.fallStartTime;
-                    const progress = Math.min(elapsed / this.dangerZone.fallDuration, 1);
-                    
-                    this.dangerZone.intensity = progress;
-                    this.log('STATE', 'Danger zone falling', {
-                        progress,
-                        intensity: this.dangerZone.intensity
-                    });
-
-                    if (progress >= 1) {
-                        this.log('STATE', 'Danger zone complete');
-                        this.dangerZone.falling = false;
-                        this.dangerZone.active = false;
-                    }
-                }
-            }
-
-            handleWebSocketMessage(event) {
-                const data = JSON.parse(event.data);
-                this.log('WEBSOCKET', 'Received message', { type: data.type });
-
-                switch (data.type) {
-                    case 'init':
-                        this.log('WORLD', 'Initializing game state', {
-                            playerId: data.playerId,
-                            playerCount: data.players.size,
-                            worldSize: data.worldSize
-                        });
-                        this.playerId = data.playerId;
-                        this.worldSize = data.worldSize;
-                        this.players = new Map(data.players);
-                        break;
-
-                    case 'playerJoined':
-                        this.log('PLAYER', 'New player joined', {
-                            id: data.player.id,
-                            name: data.player.name
-                        });
-                        this.players.set(data.player.id, data.player);
-                        break;
-
-                    case 'playerLeft':
-                        this.log('PLAYER', 'Player left', { id: data.playerId });
-                        this.players.delete(data.playerId);
-                        break;
-
-                    case 'playerUpdate':
-                        const player = this.players.get(data.playerId);
-                        if (player) {
-                            this.log('PLAYER', 'Updating player state', {
-                                id: data.playerId,
-                                position: { x: data.x, y: data.y }
-                            });
-                            Object.assign(player, data);
-                        }
-                        break;
-
-                    case 'dangerZone':
-                        this.log('WORLD', 'Danger zone update', {
-                            active: data.active,
-                            width: data.width
-                        });
-                        this.dangerZone = {
-                            ...this.dangerZone,
-                            ...data
-                        };
-                        break;
-
-                    default:
-                        this.log('ERROR', 'Unknown message type', { type: data.type });
-                }
-            }
-
-            shareGameOver() {
-                this.log('FLEX', 'Attempting to share game over');
                 
-                if (!window.sdk) {
-                    this.log('ERROR', 'Cannot share - SDK not available');
-                    return;
-                }
-
-                const player = this.players.get(this.playerId);
-                if (!player) {
-                    this.log('ERROR', 'Cannot share - Player not found');
-                    return;
-                }
-
-                const text = this.formatShareText(player.score);
-                this.log('FLEX', 'Sharing game over', { text });
-
-                window.sdk.actions.composeCast({ text })
-                    .then(() => this.log('FLEX', 'Successfully shared game over'))
-                    .catch(error => this.log('ERROR', 'Failed to share game over', { error }));
-            }
-
-            // Add method to handle avatar loading
-            async loadPlayerAvatar(playerId, avatarUrl) {
-                if (!avatarUrl) return;
-                if (this.avatarCache.has(playerId)) return;
+                // Listen for global errors
+                window.addEventListener('error', (event) => {
+                    this.show('Error: ' + event.message, 'error');
+                });
                 
-                try {
-                    const img = await this.loadImage(avatarUrl);
-                    this.avatarCache.set(playerId, img);
-                } catch (error) {
-                    console.warn(`Error loading avatar for player ${playerId}:`, error);
-                }
-            }
-
-            startPingInterval() {
-                this.pingInterval = setInterval(() => {
-                    const now = Date.now();
-                    if (now - this.lastPingTime > 5000) {
-                        this.lastPingTime = now;
-                        this.ws.send(JSON.stringify({ type: 'ping' }));
-                    }
-                }, 1000);
-            }
-
-            stopPingInterval() {
-                clearInterval(this.pingInterval);
-            }
+                // Listen for unhandled promise rejections
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.show('Promise error: ' + event.reason, 'error');
+                });
+            },
             
-            // Function to update game over screen content
-            updateGameOverScreen() {
-                if (!this.gameOverScreen) return;
+            // Show notification
+            show(message, type = 'info', duration = 5000) {
+                if (!this.container) return;
                 
-                // Default game over text
-                this.gameOverScreen.innerHTML = `
-                    <div>Game Over</div>
-                    <div style="font-size: 24px; margin-top: 20px;">Click to play again</div>
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                
+                let icon = '';
+                switch (type) {
+                    case 'error': icon = '❌'; break;
+                    case 'warning': icon = '⚠️'; break;
+                    case 'success': icon = '✅'; break;
+                    default: icon = 'ℹ️';
+                }
+                
+                notification.innerHTML = `
+                    <div class="icon">${icon}</div>
+                    <div class="message">${message}</div>
+                    <div class="close">×</div>
                 `;
                 
-                // Add click event to restart
-                this.gameOverScreen.onclick = () => {
-                    // Hide game over screen
-                    this.gameOverScreen.style.display = 'none';
-                    // Reconnect to server
-                    this.connectToServer();
-                };
-            }
-            
-            // Method to show game over screen
-            showGameOver(reason, killerInfo) {
-                if (!this.gameOverScreen) return;
+                this.container.appendChild(notification);
                 
-                let message = 'Game Over!';
-                if (reason === 'eaten' && killerInfo) {
-                    message = `Eaten by ${killerInfo.name || 'another player'}!`;
-                } else if (reason === 'fell') {
-                    message = 'You fell off the edge!';
-                }
-                
-                this.gameOverScreen.innerHTML = `
-                    <div>${message}</div>
-                    <div style="font-size: 24px; margin-top: 20px;">Click to play again</div>
-                `;
-                
-                this.gameOverScreen.style.display = 'block';
-            }
-            
-            // Method to handle falling off the edge
-            startFalling() {
-                if (this.dangerZone.falling) return;
-                
-                this.dangerZone.falling = true;
-                this.dangerZone.fallStartTime = Date.now();
-                this.log('DEATH', 'Player started falling off the edge');
-                
-                // Show game over after fall animation completes
+                // Animate in
                 setTimeout(() => {
-                    this.showGameOver('fell');
-                }, this.dangerZone.fallDuration);
-            }
-
-            // Detect if the user is likely on a mobile network
-            isMobileNetwork() {
-                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-                if (connection) {
-                    // If Network Information API is available
-                    return connection.type === 'cellular' || 
-                           connection.effectiveType === 'slow-2g' || 
-                           connection.effectiveType === '2g' || 
-                           connection.effectiveType === '3g';
+                    notification.classList.add('show');
+                }, 10);
+                
+                // Setup close button
+                const closeBtn = notification.querySelector('.close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        this.dismiss(notification);
+                    });
                 }
                 
-                // Fallback detection based on user agent
-                const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-                return /android|iPad|iPhone|iPod|webOS|BlackBerry|Windows Phone/i.test(userAgent);
+                // Auto dismiss after duration
+                if (duration > 0) {
+                    setTimeout(() => {
+                        this.dismiss(notification);
+                    }, duration);
+                }
+                
+                return notification;
+            },
+            
+            // Dismiss notification
+            dismiss(notification) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode === this.container) {
+                        this.container.removeChild(notification);
+                    }
+                }, 300);
             }
-
-            // Touch event handlers for mobile
-            handleTouchStart(event) {
-                event.preventDefault();
-                if (event.touches.length > 0) {
-                    const touch = event.touches[0];
-                    this.touchActive = true;
-                    this.touchX = touch.clientX;
-                    this.touchY = touch.clientY;
+        };
+        
+        // Achievement System
+        class AchievementSystem {
+            constructor(options = {}) {
+                this.options = {
+                    container: document.getElementById('achievements-container'),
+                    displayDuration: 5000,
+                    maxDisplayed: 3,
+                    ...options
+                };
+                
+                this.achievements = {
+                    firstKill: {
+                        id: 'firstKill',
+                        title: 'First Blood',
+                        description: 'Devour another player for the first time',
+                        icon: '🩸',
+                        triggered: false,
+                        shareText: 'I just got my first player kill in Whale Wars!'
+                    },
+                    sizeFifty: {
+                        id: 'sizeFifty',
+                        title: 'Growing Up',
+                        description: 'Reach size 50',
+                        icon: '🐋',
+                        triggered: false,
+                        shareText: 'I grew to size 50 in Whale Wars!'
+                    },
+                    sizeHundred: {
+                        id: 'sizeHundred',
+                        title: 'Whale Lord',
+                        description: 'Reach size 100',
+                        icon: '👑',
+                        triggered: false,
+                        shareText: 'I reached size 100 in Whale Wars!'
+                    },
+                    fishFeast: {
+                        id: 'fishFeast',
+                        title: 'Fish Feast',
+                        description: 'Eat 20 fish in a single game',
+                        icon: '🐟',
+                        triggered: false,
+                        shareText: 'I devoured 20 fish in a single game of Whale Wars!'
+                    },
+                    survivor: {
+                        id: 'survivor',
+                        title: 'Survivor',
+                        description: 'Stay alive for 3 minutes',
+                        icon: '⏱️',
+                        triggered: false,
+                        shareText: 'I survived for over 3 minutes in Whale Wars!'
+                    }
+                };
+                
+                this.stats = {
+                    fishEaten: 0,
+                    playersEaten: 0,
+                    maxSize: 0,
+                    survivalTime: 0,
+                    gameStartTime: null
+                };
+                
+                this.activeNotifications = [];
+                this.initShareModal();
+                
+                // Load previously unlocked achievements from localStorage
+                this.loadUnlockedAchievements();
+            }
+            
+            initShareModal() {
+                const modal = document.getElementById('share-modal');
+                const cancelBtn = document.getElementById('share-cancel');
+                const shareBtn = document.getElementById('share-to-farcaster');
+                
+                let currentAchievement = null;
+                
+                cancelBtn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+                
+                shareBtn.addEventListener('click', async () => {
+                    if (!currentAchievement) return;
                     
-                    // Also update mouse position for consistent control logic
-                    this.mouseX = touch.clientX;
-                    this.mouseY = touch.clientY;
+                    try {
+                        if (window.farcaster && sdk) {
+                            const shareText = currentAchievement.shareText || 
+                                `I unlocked the "${currentAchievement.title}" achievement in Whale Wars!`;
+                            
+                            // Create a frame for sharing via Farcaster
+                            await sdk.publishCast({
+                                text: shareText,
+                                embeds: [
+                                    {
+                                        url: `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
+                                    }
+                                ]
+                            });
+                            
+                            notifications.show('Shared to Farcaster!', 'success');
+                        } else {
+                            // Fallback for when Farcaster isn't available
+                            console.log('Farcaster SDK not available, opening sharing URL');
+                            window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
+                        }
+                    } catch (error) {
+                        console.error('Error sharing to Farcaster:', error);
+                        notifications.show('Failed to share. Try again later.', 'error');
+                    }
+                    
+                    modal.style.display = 'none';
+                });
+                
+                // Expose method to show the share modal
+                this.showShareModal = (achievement) => {
+                    currentAchievement = achievement;
+                    document.getElementById('share-preview-image').src = 
+                        `https://whale-wars.onrender.com/api/achievement?id=${achievement.id}&preview=true`;
+                    modal.style.display = 'flex';
+                };
+            }
+            
+            loadUnlockedAchievements() {
+                try {
+                    const saved = localStorage.getItem('whaleWars_achievements');
+                    if (saved) {
+                        const unlockedIds = JSON.parse(saved);
+                        for (const id of unlockedIds) {
+                            if (this.achievements[id]) {
+                                this.achievements[id].triggered = true;
+                            }
+                        }
+                        console.log('Loaded unlocked achievements:', unlockedIds);
+                    }
+                } catch (e) {
+                    console.error('Error loading achievements:', e);
                 }
             }
             
-            handleTouchMove(event) {
-                event.preventDefault();
-                if (event.touches.length > 0 && this.touchActive) {
-                    const touch = event.touches[0];
-                    this.touchX = touch.clientX;
-                    this.touchY = touch.clientY;
-                    
-                    // Also update mouse position for consistent control logic
-                    this.mouseX = touch.clientX;
-                    this.mouseY = touch.clientY;
+            saveUnlockedAchievements() {
+                try {
+                    const unlockedIds = Object.values(this.achievements)
+                        .filter(a => a.triggered)
+                        .map(a => a.id);
+                    localStorage.setItem('whaleWars_achievements', JSON.stringify(unlockedIds));
+                } catch (e) {
+                    console.error('Error saving achievements:', e);
                 }
             }
             
-            handleTouchEnd(event) {
-                event.preventDefault();
-                this.touchActive = false;
+            startGame() {
+                // Reset game-specific stats
+                this.stats.fishEaten = 0;
+                this.stats.playersEaten = 0;
+                this.stats.maxSize = 0;
+                this.stats.survivalTime = 0;
+                this.stats.gameStartTime = Date.now();
+            }
+            
+            updateStats(update) {
+                // Update stats based on game events
+                if (update.fishEaten) this.stats.fishEaten += update.fishEaten;
+                if (update.playerEaten) this.stats.playersEaten += 1;
+                if (update.size) this.stats.maxSize = Math.max(this.stats.maxSize, update.size);
+                
+                if (this.stats.gameStartTime) {
+                    this.stats.survivalTime = (Date.now() - this.stats.gameStartTime) / 1000; // in seconds
+                }
+                
+                // Check for achievements
+                this.checkAchievements();
+            }
+            
+            endGame() {
+                // Final stats update at game end
+                this.stats.gameStartTime = null;
+            }
+            
+            checkAchievements() {
+                // Check if any new achievements have been triggered
+                
+                // First Kill achievement
+                if (!this.achievements.firstKill.triggered && this.stats.playersEaten >= 1) {
+                    this.unlockAchievement('firstKill');
+                }
+                
+                // Size 50 achievement
+                if (!this.achievements.sizeFifty.triggered && this.stats.maxSize >= 50) {
+                    this.unlockAchievement('sizeFifty');
+                }
+                
+                // Size 100 achievement
+                if (!this.achievements.sizeHundred.triggered && this.stats.maxSize >= 100) {
+                    this.unlockAchievement('sizeHundred');
+                }
+                
+                // Fish Feast achievement
+                if (!this.achievements.fishFeast.triggered && this.stats.fishEaten >= 20) {
+                    this.unlockAchievement('fishFeast');
+                }
+                
+                // Survivor achievement
+                if (!this.achievements.survivor.triggered && this.stats.survivalTime >= 180) { // 3 minutes
+                    this.unlockAchievement('survivor');
+                }
+            }
+            
+            unlockAchievement(id) {
+                const achievement = this.achievements[id];
+                if (!achievement || achievement.triggered) return;
+                
+                // Mark as triggered
+                achievement.triggered = true;
+                this.saveUnlockedAchievements();
+                
+                // Show notification
+                this.showNotification(achievement);
+                
+                // Log to console
+                console.log(`🏆 [ACHIEVEMENT] Unlocked: ${achievement.title}`);
+            }
+            
+            showNotification(achievement) {
+                if (!this.options.container) return;
+                
+                // Create notification element
+                const notification = document.createElement('div');
+                notification.className = 'achievement';
+                notification.innerHTML = `
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <div class="achievement-content">
+                        <div class="achievement-title">${achievement.title}</div>
+                        <div class="achievement-description">${achievement.description}</div>
+                        <button class="achievement-share">Share</button>
+                    </div>
+                `;
+                
+                // Add to container
+                this.options.container.appendChild(notification);
+                
+                // Add share button event listener
+                const shareBtn = notification.querySelector('.achievement-share');
+                shareBtn.addEventListener('click', () => {
+                    this.showShareModal(achievement);
+                });
+                
+                // Animate in
+                setTimeout(() => {
+                    notification.classList.add('show');
+                }, 10);
+                
+                // Track active notification
+                this.activeNotifications.push(notification);
+                
+                // Limit max displayed notifications
+                while (this.activeNotifications.length > this.options.maxDisplayed) {
+                    const oldNotification = this.activeNotifications.shift();
+                    this.dismissNotification(oldNotification);
+                }
+                
+                // Auto dismiss after duration
+                setTimeout(() => {
+                    this.dismissNotification(notification);
+                }, this.options.displayDuration);
+            }
+            
+            dismissNotification(notification) {
+                if (!notification) return;
+                
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode === this.options.container) {
+                        this.options.container.removeChild(notification);
+                    }
+                    this.activeNotifications = this.activeNotifications.filter(n => n !== notification);
+                }, 500);
             }
         }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Create global logger for initialization phase
-            const initLogger = new Logger({
-                enableConsole: true,
-                logLevel: 'debug',
-                maxLogEntries: 50
-            });
+        
+        // Set up game and achievement system
+        let achievements;
+        
+        // Initialize systems when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize notification system
+            notifications.init();
             
-            initLogger.info('INIT', 'Game initialization starting');
+            // Initialize achievement system
+            achievements = new AchievementSystem();
             
-            try {
-                // Try to get Mini App context to detect environment
-                initLogger.debug('INIT', 'Detecting environment');
-                let userContext = null;
-                let isMiniApp = false;
-
-                try {
-                    initLogger.debug('FARCASTER', 'Attempting to get Mini App context');
-                    const context = await sdk.context;
-                    initLogger.info('FARCASTER', 'Running in Mini App environment', {
-                        clientFid: context.client?.clientFid,
-                        userFid: context.user?.fid,
-                        username: context.user?.username,
-                        displayName: context.user?.displayName,
-                        hasPfp: !!context.user?.pfpUrl
-                    });
-                    isMiniApp = true;
-                    userContext = context.user;
-                } catch (e) {
-                    initLogger.info('INIT', 'Running in standalone web environment', { error: e.message });
-                    isMiniApp = false;
+            // Initialize game over screen
+            gameOverScreen.init();
+            
+            // Set up mobile UI enhancements
+            setupMobileUI();
+            
+            // ... existing code ...
+        });
+        
+        // ... existing code ...
+        
+        // Game events to trigger achievements
+        function updateAchievements(event) {
+            if (!achievements) return;
+            
+            switch (event.type) {
+                case 'gameStart':
+                    achievements.startGame();
+                    break;
+                    
+                case 'eatFish':
+                    achievements.updateStats({ fishEaten: 1, size: event.newSize });
+                    break;
+                    
+                case 'eatPlayer':
+                    achievements.updateStats({ playerEaten: true, size: event.newSize });
+                    break;
+                    
+                case 'updateSize':
+                    achievements.updateStats({ size: event.size });
+                    break;
+                    
+                case 'gameEnd':
+                    achievements.endGame();
+                    break;
+            }
+        }
+        
+        // Game over screen handling
+        const gameOverScreen = {
+            // Properties
+            element: null,
+            finalSize: null,
+            survivalTime: null,
+            fishEaten: null,
+            playersEaten: null,
+            restartButton: null,
+            shareButton: null,
+            
+            // Game over stats
+            stats: {
+                finalSize: 0,
+                survivalTime: 0,
+                fishEaten: 0,
+                playersEaten: 0,
+                deathType: '',
+                killedBy: null
+            },
+            
+            // Initialize game over screen
+            init() {
+                this.element = document.querySelector('.game-over-screen');
+                this.finalSize = document.getElementById('final-size');
+                this.survivalTime = document.getElementById('survival-time');
+                this.fishEaten = document.getElementById('fish-eaten');
+                this.playersEaten = document.getElementById('players-eaten');
+                this.restartButton = document.getElementById('restart-game');
+                this.shareButton = document.getElementById('share-game-stats');
+                
+                if (!this.element || !this.restartButton || !this.shareButton) {
+                    console.error('Game over screen elements not found');
+                    return;
                 }
-
-                // Initialize game based on environment
-                initLogger.info('INIT', 'Initializing game with context', {
-                    isMiniApp,
-                    hasUserContext: !!userContext,
-                    userFid: userContext?.fid
+                
+                // Set up event listeners
+                this.restartButton.addEventListener('click', () => {
+                    this.hide();
+                    
+                    // Trigger respawn
+                    if (window.respawnPlayer) {
+                        window.respawnPlayer();
+                    }
                 });
                 
-                const canvas = document.getElementById('game-canvas');
-                const game = new Game(canvas, userContext);
-
-                // Set initial canvas size
-                initLogger.debug('UI', 'Setting canvas size');
-                game.resizeCanvas();
-
-                // Show leaderboard
-                initLogger.debug('UI', 'Showing game UI');
-                document.getElementById('leaderboard').style.display = 'block';
-                document.getElementById('score').style.display = 'none';
-
-                // If in Mini App, hide splash screen and start game immediately
-                if (isMiniApp) {
-                    initLogger.info('FARCASTER', 'Starting game automatically in Mini App');
-                    game.start();
-                    await sdk.actions.ready({ disableNativeGestures: true });
-                    initLogger.info('FARCASTER', 'Mini App ready and game started');
-                }
+                this.shareButton.addEventListener('click', () => {
+                    this.shareStats();
+                });
                 
-                initLogger.info('INIT', 'Game initialized successfully');
+                // Allow clicking anywhere on game over screen to restart
+                this.element.addEventListener('click', (e) => {
+                    // Only restart if clicking directly on the backdrop, not the content
+                    if (e.target === this.element) {
+                        this.restartButton.click();
+                    }
+                });
                 
-                // Make logs available for debugging
-                window._gameLogger = game.logger;
-                window._initLogger = initLogger;
-                
-                // Function to export logs
-                window.exportLogs = () => {
-                    return {
-                        init: initLogger.exportLogs(),
-                        game: game.logger ? game.logger.exportLogs() : null
-                    };
+                console.log('Game over screen initialized');
+            },
+            
+            // Show game over screen with stats
+            show(stats = {}) {
+                // Update stats
+                this.stats = {
+                    ...this.stats,
+                    ...stats
                 };
-            } catch (e) {
-                initLogger.error('INIT', 'Error initializing game', { 
-                    error: e.message,
-                    stack: e.stack
-                });
                 
-                // Show error state in leaderboard
-                const leaderboardEl = document.getElementById('leaderboard-entries');
-                if (leaderboardEl) {
-                    leaderboardEl.innerHTML = '<div class="error">Error loading game</div>';
-                }
-                document.getElementById('leaderboard').style.display = 'block';
+                // Update UI
+                this.finalSize.textContent = Math.round(this.stats.finalSize);
                 
-                // If in Mini App, still hide splash screen
+                // Format survival time (seconds to MM:SS)
+                const minutes = Math.floor(this.stats.survivalTime / 60);
+                const seconds = Math.floor(this.stats.survivalTime % 60);
+                this.survivalTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                this.fishEaten.textContent = this.stats.fishEaten;
+                this.playersEaten.textContent = this.stats.playersEaten;
+                
+                // Show screen
+                this.element.style.display = 'flex';
+                
+                console.log('Game over screen shown with stats:', this.stats);
+            },
+            
+            // Hide game over screen
+            hide() {
+                this.element.style.display = 'none';
+            },
+            
+            // Share game stats to Farcaster
+            async shareStats() {
                 try {
-                    initLogger.debug('FARCASTER', 'Attempting to hide splash screen in error state');
-                    await sdk.actions.ready();
-                    initLogger.info('FARCASTER', 'Splash screen hidden in error state');
-                } catch (e) {
-                    initLogger.debug('INIT', 'Not in Mini App environment, ignoring splash screen');
+                    if (window.farcaster && sdk) {
+                        // Generate share text based on stats
+                        let shareText = `I just played Whale Wars! Final size: ${Math.round(this.stats.finalSize)}`;
+                        
+                        if (this.stats.playersEaten > 0) {
+                            shareText += `, devoured ${this.stats.playersEaten} player${this.stats.playersEaten > 1 ? 's' : ''}`;
+                        }
+                        
+                        // Add death info if available
+                        if (this.stats.deathType === 'player' && this.stats.killedBy) {
+                            shareText += `. Eaten by ${this.stats.killedBy}!`;
+                        } else if (this.stats.deathType === 'boundary') {
+                            shareText += `. Died by hitting the boundary!`;
+                        }
+                        
+                        // Create a frame for sharing via Farcaster
+                        await sdk.publishCast({
+                            text: shareText,
+                            embeds: [
+                                {
+                                    url: `https://whale-wars.onrender.com/api/gamestats?size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`
+                                }
+                            ]
+                        });
+                        
+                        notifications.show('Shared to Farcaster!', 'success');
+                    } else {
+                        // Fallback for when Farcaster isn't available
+                        console.log('Farcaster SDK not available, opening sharing URL');
+                        
+                        const shareUrl = `https://whale-wars.onrender.com?share=stats&size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`;
+                        window.open(shareUrl, '_blank');
+                    }
+                } catch (error) {
+                    console.error('Error sharing to Farcaster:', error);
+                    notifications.show('Failed to share. Try again later.', 'error');
                 }
             }
-        });
+        };
+        
+        // Expose achievement system and game over screen to the game logic
+        window.gameEvents = window.gameEvents || {};
+        window.gameEvents.achievements = updateAchievements;
+        window.gameEvents.showGameOver = (stats) => {
+            if (gameOverScreen) {
+                gameOverScreen.show(stats);
+            }
+        };
     </script>
 </body>
 </html> 

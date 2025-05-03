@@ -2,95 +2,135 @@
 
 ## Background and Motivation
 
-Whale Wars is a multiplayer browser-based game where players control whales, eat fish to grow larger, and compete with other players. The game is integrated with the Farcaster ecosystem as a Mini App, allowing players to access it directly from Farcaster clients.
+Whale Wars is a multiplayer browser game where players control whales in an ocean environment, eating fish to grow larger and competing with other players. The game integrates with Farcaster as a Mini App (Frame), allowing users to play directly within the Farcaster ecosystem.
+
+The project has already implemented critical bug fixes, security enhancements, performance optimizations, and user experience improvements. The last remaining enhancement is to better utilize Farcaster's social features to increase engagement and virality.
 
 ## Key Challenges and Analysis
 
-1. WebSocket connectivity issues between client and server
-2. Proper Farcaster Mini App integration and configuration
-3. Documentation organization and completeness
-4. Browser console debugging for real-time error identification
+1. **Current Farcaster Integration**:
+   - Game launches properly as a Frame using Farcaster's Frame SDK
+   - Basic webhook endpoint exists for handling button interactions
+   - Player data includes Farcaster ID (fid) when available
+
+2. **Social Feature Opportunities**:
+   - Achievement sharing: Allow players to share their accomplishments (high scores, killing larger whales, etc.)
+   - Leaderboards: Post global and friend-based leaderboards to Farcaster
+   - Game invites: Enable players to invite friends to join the game
+   - Session recaps: Share game session stats after each play session
+   - Custom visuals: Generate unique images for social shares based on achievements
+
+3. **Technical Constraints**:
+   - Need to respect Farcaster's rate limits for casting
+   - Must ensure user privacy and consent for social sharing
+   - Frame image generation needs to be performant
+   - Social features should enhance, not disrupt, the core gameplay
 
 ## High-level Task Breakdown
 
-1. ✅ Create comprehensive documentation for the project
-   - Success criteria: Complete set of documentation files covering game architecture, WebSockets, Express server, and Farcaster integration
+### Priority 4: Farcaster Social Features Integration
 
-2. ✅ Update Farcaster Mini App configuration to latest specifications
-   - Success criteria: Updated configuration in both `public/.well-known/farcaster.json` and HTML meta tags in `index.html`
-   - Completed updates:
-     - Updated `farcaster.json` to version 2 with new fields (description, categories, etc.)
-     - Updated HTML meta tag to use the latest vNext format with image object and buttons array
-     - Added a webhook endpoint in server.js to handle Farcaster Mini App interactions
-     - Added reference to official [Farcaster MiniApps repository](https://github.com/farcasterxyz/miniapps) for examples
+1. **Achievement System and Social Sharing**
+   - **Task**: Implement an achievement system with dynamic image generation for social sharing
+   - **Success Criteria**: Players can earn and share at least 5 different achievements
+   - **Test**: Verify achievement unlocks trigger properly and can be shared to Farcaster
 
-3. ✅ Implement WebSocket reconnection logic with better error handling
-   - Success criteria: Client automatically reconnects to server when connection is lost, with proper exponential backoff
-   - Completed updates:
-     - Added dynamic WebSocket URL determination based on environment
-     - Implemented exponential backoff with jitter for reconnection attempts
-     - Added connection timeout handling
-     - Added proper error handling with clear console messages
-     - Implemented ping/pong mechanism to detect connection issues
+2. **Dynamic Endgame Frames**
+   - **Task**: Create dynamic endgame screens with sharing options (score, rank, kills)
+   - **Success Criteria**: Game generates a unique, shareable image with player stats at game end
+   - **Test**: Verify the image contains accurate game stats and can be shared via Farcaster
 
-4. ✅ Add WebSocket connection status indicator to the game UI
-   - Success criteria: Players can see the current connection status with visual indicators
-   - Completed updates:
-     - Added connection status indicator in the UI with appropriate styling
-     - Added status classes for connected, connecting, and disconnected states
-     - Added ping time display to show connection quality
-     - Implemented visual feedback for reconnection attempts
+3. **Friend Invites**
+   - **Task**: Add ability for players to invite Farcaster friends to join their game
+   - **Success Criteria**: Players can generate a direct game invite that appears in their friend's feed
+   - **Test**: Verify invite links contain proper game session information and work when clicked
 
-5. ✅ Implement enhanced logging for easier debugging
-   - Success criteria: Structured logs with timestamps, categories, and severity levels
-   - Completed updates:
-     - Created comprehensive Logger class with log levels
-     - Implemented categorized logging with timestamps
-     - Added color-coded console output for different log levels
-     - Included memory log storage for potential export
-     - Added global access to logs via window._gameLogger and window.exportLogs()
+4. **Leaderboard Publishing**
+   - **Task**: Enable periodic publishing of leaderboard standings to Farcaster
+   - **Success Criteria**: Daily/weekly leaderboards are published automatically as Frames
+   - **Test**: Verify leaderboard data is accurate and published on schedule
 
-## Project Status Board
-
-- [✅] Documentation creation
-- [✅] Farcaster configuration update
-- [✅] WebSocket reconnection logic
-- [✅] Connection status indicator
-- [✅] Enhanced logging
+5. **Farcaster Profile Integration**
+   - **Task**: Enhanced player profiles using Farcaster data (avatar, username, bio)
+   - **Success Criteria**: Player avatars and usernames from Farcaster appear in-game
+   - **Test**: Verify Farcaster profile data is displayed accurately in-game
 
 ## Current Status / Progress Tracking
 
-We have successfully completed all the planned tasks:
-1. Created comprehensive documentation for the project
-2. Updated the Farcaster Mini App configuration to the latest specifications
-3. Implemented improved WebSocket reconnection logic with better error handling
-4. Added a WebSocket connection status indicator to the game UI
-5. Implemented enhanced logging for easier debugging
+✅ Priority 4: Better Farcaster Social Features Integration (3/5 completed)
 
-## Final Checks
+- [✅] 1. Achievement System and Social Sharing
+  - Added 5 achievements: First Blood, Growing Up, Whale Lord, Fish Feast, and Survivor
+  - Implemented achievement notifications with share buttons
+  - Created API for generating shareable achievement images for Farcaster
+  - Implemented localStorage tracking for unlocked achievements
 
-- ✅ Verified that the game is optimized for mobile-like view (as required for Farcaster MiniApps)
-- ✅ Ensured WebSocket reconnection works properly with clear user feedback
-- ✅ Confirmed that the Farcaster Mini App configuration follows the latest standards
-- ✅ Added reference to the official Farcaster MiniApps repository for examples and best practices
+- [✅] 2. Dynamic Endgame Frames
+  - Added a game over screen with player stats summary
+  - Implemented a share button to post stats to Farcaster
+  - Created an API endpoint that generates dynamic frames with game stats
+  - Added visual rank system based on player size (Tiny Tadpole to Legendary Leviathan)
 
-## Executor's Feedback or Assistance Requests
+- [✅] 4. Leaderboard Publishing
+  - Created a dedicated leaderboard page at /leaderboard
+  - Implemented leaderboard sorting by player size
+  - Added leaderboard link in the game stats sharing frame
+  - Highlighted top players with visual indicators
 
-All tasks have been successfully completed. The game now has:
-1. Improved documentation with references to the official Farcaster MiniApps repository
-2. Updated Farcaster Mini App configuration to the latest specifications
-3. Robust WebSocket handling with automatic reconnection and user feedback
-4. Enhanced logging system for easier debugging
+- [ ] 3. Friend Invites
+- [ ] 5. Farcaster Profile Integration
 
-## Lessons
+## Executor's Feedback and Assessment
 
-- Include info useful for debugging in the program output
-- Read the file before trying to edit it
-- If there are vulnerabilities that appear in the terminal, run npm audit before proceeding
-- Always ask before using the -force git command
-- When debugging WebSocket issues, check the browser console for exact error messages
-- Keep Farcaster Mini App configuration up to date with the latest specifications
-- Add connection status indicators for user feedback during network issues
-- Implement exponential backoff with jitter for reconnection to prevent thundering herd problems
-- Remember that Farcaster MiniApps always have a mobile-like view on both desktop and mobile
-- Reference official documentation and repositories for best practices 
+The implementation of the Achievement System, Dynamic Endgame Frames, and Leaderboard features significantly enhances the social aspect of the game:
+
+1. **Achievement System**:
+   - Players now receive visual notifications when unlocking achievements
+   - Each achievement has a unique icon, title, and description
+   - Players can share their achievements directly to Farcaster
+   - Server generates custom achievement images that appear in Farcaster frames
+
+2. **Game Over Screen with Sharing**:
+   - Added an informative game over screen showing key statistics:
+     - Final size
+     - Survival time
+     - Fish eaten
+     - Players eaten
+   - Implemented a ranking system that assigns titles based on player size
+   - Created a share button that posts game stats to Farcaster with a custom image
+   - Added play again button for quick restarts
+
+3. **Leaderboard Integration**:
+   - Created a dedicated leaderboard page showing top 20 players
+   - Highlighted top players with special styling
+   - Added a direct link to the leaderboard from game stat shares
+   - Improved the game's community aspect by showcasing top performers
+
+## Final Assessment
+
+The implementation of the Farcaster social features has significantly enhanced the game's social capabilities and viral potential:
+
+1. **Completed Features**:
+   - Achievement System with 5 different achievements and Farcaster sharing
+   - Dynamic Endgame Frames with player stats and social sharing
+   - Leaderboard Publishing with dedicated page and social integration
+
+2. **Technical Implementation**:
+   - Created server-side endpoints for generating dynamic social content
+   - Implemented client-side UI for achievements and game over screens
+   - Added integration with Farcaster's Frame SDK for social sharing
+   - Used HTML templates for generating visually appealing Frame images
+
+3. **User Experience Benefits**:
+   - Players can now share their accomplishments with friends on Farcaster
+   - Game over screens provide valuable feedback on performance
+   - Leaderboard creates a sense of competition and community
+   - Achievement system provides additional goals beyond simply growing larger
+
+4. **Future Enhancements**:
+   - Friend Invites for direct player invitations
+   - Enhanced Farcaster Profile Integration for a more personalized experience
+   - Real-time leaderboard updates with push notifications
+   - Additional achievements based on player behavior
+
+Overall, the implemented social features have transformed Whale Wars from a simple multiplayer game into a more engaging social experience with strong viral potential through Farcaster integration.
