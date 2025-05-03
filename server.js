@@ -34,11 +34,11 @@ app.use((req, res, next) => {
     // Set Content-Security-Policy to allow execution in Farcaster frames
     res.setHeader('Content-Security-Policy', 
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh https://cdn.jsdelivr.net; " +
-        "connect-src 'self' wss://whale-wars.onrender.com ws://whale-wars.onrender.com https://*.warpcast.com wss://*.warpcast.com; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh https://cdn.jsdelivr.net https://unpkg.com https://*.warpcast.com; " +
+        "connect-src 'self' wss://whale-wars.onrender.com ws://whale-wars.onrender.com ws://localhost:* wss://localhost:* https://*.warpcast.com wss://*.warpcast.com https://unpkg.com https://esm.sh; " +
         "img-src 'self' data: https:; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "frame-ancestors 'self' https://*.warpcast.com https://warpcast.com https://frames.fc;"
+        "frame-ancestors 'self' https://*.warpcast.com https://warpcast.com https://frames.fc https://*.farcaster.xyz;"
     );
     
     // Set frame-ancestors specifically for Farcaster

@@ -708,22 +708,74 @@
     </div>
 
     <script type="module">
-        // Update import to use a direct CDN URL instead of package name
-        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk@0.0.37/dist/index.js';
+        // Use multiple import approaches to ensure compatibility
+        let frameSdk;
         
-        // Make the SDK available globally
-        window.frameSdk = sdk;
-        
-        // Follow documentation exactly - call ready ASAP
-        (async function() {
+        // Import SDK using different methods for maximum compatibility
+        async function loadFrameSdk() {
             try {
+                // First, try importing from the CDN with a specific version
+                try {
+                    console.log('Attempting to import SDK from ESM.sh CDN...');
+                    const importedSdk = await import('https://esm.sh/@farcaster/frame-sdk@0.0.37');
+                    frameSdk = importedSdk.sdk || importedSdk.default;
+                    console.log('Successfully imported Frame SDK from ESM.sh CDN');
+                } catch (esmError) {
+                    console.warn('Failed to import from ESM.sh CDN:', esmError);
+                    
+                    // Try unpkg as fallback
+                    try {
+                        console.log('Attempting to import SDK from unpkg...');
+                        const unpkgSdk = await import('https://unpkg.com/@farcaster/frame-sdk@0.0.37/dist/index.js');
+                        frameSdk = unpkgSdk.sdk || unpkgSdk.default;
+                        console.log('Successfully imported Frame SDK from unpkg');
+                    } catch (unpkgError) {
+                        console.warn('Failed to import from unpkg:', unpkgError);
+                        
+                        // Try direct import as last resort
+                        console.log('Attempting direct SDK import...');
+                        const directSdk = await import('@farcaster/frame-sdk');
+                        frameSdk = directSdk.sdk || directSdk.default;
+                        console.log('Successfully imported Frame SDK directly');
+                    }
+                }
+                
+                // Make the SDK available globally
+                window.frameSdk = frameSdk;
+                console.log('SDK assigned to global scope:', !!window.frameSdk);
+                
+                // Initialize the SDK ASAP
+                await initializeFrameSdk();
+                
+                // Now proceed with authentication
+                await initializeFarcasterAuth();
+                
+            } catch (error) {
+                console.error('All SDK import methods failed:', error);
+                console.log('Proceeding with anonymous mode due to SDK loading failure');
+                // Continue without SDK
+                initializeFarcasterAuth();
+            }
+        }
+        
+        // Initialize the SDK (hide splash screen)
+        async function initializeFrameSdk() {
+            try {
+                if (!window.frameSdk) {
+                    console.warn('Cannot initialize Frame SDK: not loaded');
+                    return;
+                }
+                
                 console.log('Initializing Frame SDK and hiding splash screen...');
-                await sdk.actions.ready();
+                await window.frameSdk.actions.ready();
                 console.log('Splash screen hidden');
             } catch (e) {
                 console.error('Failed to hide splash screen:', e);
             }
-        })();
+        }
+        
+        // Start loading the SDK
+        loadFrameSdk();
         
         // Check if running in Farcaster client or standalone browser
         function isInFarcasterClient() {
@@ -731,473 +783,92 @@
             const urlParams = new URLSearchParams(window.location.search);
             const isFrameParam = urlParams.has('fc') || urlParams.has('farcaster');
             
+            // Check if we're in the Warpcast preview tool
+            const isInPreviewTool = window.location.href.includes('warpcast.com/~/developers/mini-apps/preview');
+            if (isInPreviewTool) {
+                console.log('Detected that we are running in Warpcast preview tool');
+                return true;
+            }
+            
             // Check for referrer that might indicate Farcaster client
             const referrer = document.referrer || '';
             const isFarcasterReferrer = referrer.includes('warpcast.com') || 
                                         referrer.includes('farcaster.xyz') || 
                                         referrer.includes('frames.fc');
             
-            // Heuristic: Farcaster client is likely if any of these are true
-            return isFrameParam || isFarcasterReferrer;
-        }
-        
-        // Function to enhance mobile UI
-        function setupMobileUI() {
-            // Setup leaderboard toggle for mobile
-            const leaderboardToggle = document.getElementById('leaderboard-toggle');
-            const leaderboard = document.getElementById('leaderboard');
+            // Check if we're embedded in a Farcaster client
+            const isInsideFarcasterFrame = window.location.href.includes('warpcast.com') ||
+                                           window.location.href.includes('farcaster.xyz');
             
-            if (leaderboardToggle && leaderboard) {
-                leaderboardToggle.addEventListener('click', (e) => {
-                    leaderboard.classList.toggle('minimized');
-                    leaderboardToggle.textContent = leaderboard.classList.contains('minimized') ? '▲' : '▼';
-                    e.stopPropagation();
-                });
-                
-                // Clicking on the leaderboard itself will maximize it
-                leaderboard.addEventListener('click', () => {
-                    if (leaderboard.classList.contains('minimized')) {
-                        leaderboard.classList.remove('minimized');
-                        leaderboardToggle.textContent = '▼';
-                    }
-                });
-            }
+            // Check for any Farcaster-specific user agent or headers
+            const isFarcasterUserAgent = navigator.userAgent.toLowerCase().includes('farcaster') || 
+                                        navigator.userAgent.toLowerCase().includes('warpcast');
             
-            // Add double-tap detection for game functions on mobile
-            let lastTap = 0;
-            document.addEventListener('touchend', (e) => {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-                
-                if (tapLength < 300 && tapLength > 0) {
-                    // Double tap detected
-                    const gameOverScreen = document.querySelector('.game-over-screen');
-                    if (gameOverScreen && gameOverScreen.style.display === 'block') {
-                        // Click the game over screen to restart
-                        gameOverScreen.click();
-                    }
-                }
-                lastTap = currentTime;
+            // Log detection results
+            console.log('Farcaster client detection:', {
+                isFrameParam,
+                isInPreviewTool,
+                isFarcasterReferrer,
+                isInsideFarcasterFrame,
+                isFarcasterUserAgent,
+                url: window.location.href,
+                referrer: document.referrer
             });
             
-            // Check if device is mobile
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            if (isMobile) {
-                document.body.classList.add('mobile-device');
-            }
+            // Heuristic: Farcaster client is likely if any of these are true
+            return isFrameParam || isFarcasterReferrer || isInsideFarcasterFrame || 
+                   isFarcasterUserAgent || isInPreviewTool;
         }
         
-        // Notification system for user feedback
-        const notifications = {
-            container: null,
-            
-            // Initialize notification system
-            init() {
-                this.container = document.getElementById('notification-container');
-                if (!this.container) {
-                    console.error('Notification container not found');
-                    return;
-                }
-                
-                // Listen for global errors
-                window.addEventListener('error', (event) => {
-                    this.show('Error: ' + event.message, 'error');
-                });
-                
-                // Listen for unhandled promise rejections
-                window.addEventListener('unhandledrejection', (event) => {
-                    this.show('Promise error: ' + event.reason, 'error');
-                });
-            },
-            
-            // Show notification
-            show(message, type = 'info', duration = 5000) {
-                if (!this.container) return;
-                
-                const notification = document.createElement('div');
-                notification.className = `notification ${type}`;
-                
-                let icon = '';
-                switch (type) {
-                    case 'error': icon = '❌'; break;
-                    case 'warning': icon = '⚠️'; break;
-                    case 'success': icon = '✅'; break;
-                    default: icon = 'ℹ️';
-                }
-                
-                notification.innerHTML = `
-                    <div class="icon">${icon}</div>
-                    <div class="message">${message}</div>
-                    <div class="close">×</div>
-                `;
-                
-                this.container.appendChild(notification);
-                
-                // Animate in
-                setTimeout(() => {
-                    notification.classList.add('show');
-                }, 10);
-                
-                // Setup close button
-                const closeBtn = notification.querySelector('.close');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => {
-                        this.dismiss(notification);
-                    });
-                }
-                
-                // Auto dismiss after duration
-                if (duration > 0) {
-                    setTimeout(() => {
-                        this.dismiss(notification);
-                    }, duration);
-                }
-                
-                return notification;
-            },
-            
-            // Dismiss notification
-            dismiss(notification) {
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    if (notification.parentNode === this.container) {
-                        this.container.removeChild(notification);
+        // Extract username from URL (for Warpcast preview tool)
+        function extractUsernameFromUrl() {
+            try {
+                // In Warpcast preview URL, the username might be in the path
+                const pathSegments = window.location.pathname.split('/');
+                for (let i = 0; i < pathSegments.length; i++) {
+                    if (pathSegments[i] === '~' && i+1 < pathSegments.length) {
+                        const usernameCandidate = pathSegments[i+1];
+                        if (usernameCandidate && !usernameCandidate.includes('/')) {
+                            console.log('Extracted username from URL path:', usernameCandidate);
+                            return {
+                                username: usernameCandidate,
+                                fid: 'unknown'  // We don't have the FID from the path
+                            };
+                        }
                     }
-                }, 300);
-            }
-        };
-        
-        // Achievement System
-        class AchievementSystem {
-            constructor(options = {}) {
-                this.options = {
-                    container: document.getElementById('achievements-container'),
-                    displayDuration: 5000,
-                    maxDisplayed: 3,
-                    ...options
-                };
+                }
                 
-                this.achievements = {
-                    firstKill: {
-                        id: 'firstKill',
-                        title: 'First Swallow',
-                        description: 'Devour another player for the first time',
-                        icon: '🐳',
-                        triggered: false,
-                        shareText: 'I just swallowed my first player in Whale Wars! My journey to become the biggest whale on Farcaster has begun! 🐳'
-                    },
-                    sizeFifty: {
-                        id: 'sizeFifty',
-                        title: 'Growing Whale',
-                        description: 'Reach size 50',
-                        icon: '🐋',
-                        triggered: false,
-                        shareText: 'I grew to size 50 in Whale Wars! Becoming a proper whale on Farcaster! 🐳'
-                    },
-                    sizeHundred: {
-                        id: 'sizeHundred',
-                        title: 'Whale Lord',
-                        description: 'Reach size 100 - true whale status',
-                        icon: '👑',
-                        triggered: false,
-                        shareText: 'I\'m officially a WHALE on Farcaster! Reached size 100 in Whale Wars! Even the crypto whales are taking notes! 🐳'
-                    },
-                    fishFeast: {
-                        id: 'fishFeast',
-                        title: 'Fish Feast',
-                        description: 'Eat 20 fish in a single game',
-                        icon: '🐟',
-                        triggered: false,
-                        shareText: 'I devoured 20 fish in a single game of Whale Wars! Growing my whale status on Farcaster! 🐳'
-                    },
-                    survivor: {
-                        id: 'survivor',
-                        title: 'Sea Survivor',
-                        description: 'Stay alive for 3 minutes',
-                        icon: '⏱️',
-                        triggered: false,
-                        shareText: 'I survived for over 3 minutes as a whale in Whale Wars! The ocean is mine! 🐳'
-                    },
-                    megaWhale: {
-                        id: 'megaWhale',
-                        title: 'Mega Whale',
-                        description: 'Eat 5 players in a single game',
-                        icon: '💰',
-                        triggered: false,
-                        shareText: 'MEGA WHALE STATUS ACHIEVED in Whale Wars! 🐳 I\'m in the top 1% of whales on Farcaster. Swallowed 5 players in one game!'
-                    }
-                };
+                // Try getting from query parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const username = urlParams.get('username') || urlParams.get('user') || urlParams.get('name');
+                const fid = urlParams.get('fid') || urlParams.get('id');
                 
-                this.stats = {
-                    fishEaten: 0,
-                    playersEaten: 0,
-                    maxSize: 0,
-                    survivalTime: 0,
-                    gameStartTime: null
-                };
+                if (username) {
+                    console.log('Extracted username from URL parameters:', username);
+                    return { username, fid: fid || 'unknown' };
+                }
                 
-                this.activeNotifications = [];
-                this.initShareModal();
-                
-                // Load previously unlocked achievements from localStorage
-                this.loadUnlockedAchievements();
-            }
-            
-            initShareModal() {
-                const modal = document.getElementById('share-modal');
-                const cancelBtn = document.getElementById('share-cancel');
-                const shareBtn = document.getElementById('share-to-farcaster');
-                
-                let currentAchievement = null;
-                
-                cancelBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                });
-                
-                shareBtn.addEventListener('click', async () => {
-                    if (!currentAchievement) return;
-                    
+                // Try extracting from localStorage if previously stored
+                const storedUser = localStorage.getItem('farcasterUser');
+                if (storedUser) {
                     try {
-                        // Check if we're in a Farcaster client and authenticated
-                        if (window.frameSdk && (window.playerInfo?.isAuthenticated || isInFarcasterClient())) {
-                            let shareText = currentAchievement.shareText || 
-                                `I unlocked the "${currentAchievement.title}" achievement in Whale Wars!`;
-                            
-                            // Add anonymous player name if available
-                            if (window.playerInfo?.isAnonymous && window.playerInfo?.name) {
-                                shareText = `${window.playerInfo.name} ${shareText}`;
-                            }
-                            
-                            try {
-                                // Create a frame for sharing via Farcaster using updated SDK
-                                await window.frameSdk.actions.composeCast({
-                                    text: shareText,
-                                    embeds: [
-                                        `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
-                                    ]
-                                });
-                                
-                                notifications.show('Shared to Farcaster!', 'success');
-                            } catch (sdkError) {
-                                console.error('SDK sharing error:', sdkError);
-                                // Fall back to URL sharing
-                                window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
-                                notifications.show('Opened sharing link', 'info');
-                            }
-                        } else {
-                            // Fallback for anonymous mode or standalone browser
-                            console.log('Farcaster SDK not available, opening sharing URL');
-                            window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
-                            notifications.show('Opened sharing link', 'info');
+                        const userData = JSON.parse(storedUser);
+                        if (userData.username) {
+                            console.log('Retrieved username from localStorage:', userData.username);
+                            return userData;
                         }
-                    } catch (error) {
-                        console.error('Error sharing to Farcaster:', error);
-                        notifications.show('Failed to share. Try again later.', 'error');
+                    } catch (e) {
+                        console.error('Failed to parse stored user data:', e);
                     }
-                    
-                    modal.style.display = 'none';
-                });
-                
-                // Expose method to show the share modal
-                this.showShareModal = (achievement) => {
-                    currentAchievement = achievement;
-                    document.getElementById('share-preview-image').src = 
-                        `https://whale-wars.onrender.com/api/achievement?id=${achievement.id}&preview=true`;
-                    modal.style.display = 'flex';
-                };
-            }
-            
-            loadUnlockedAchievements() {
-                try {
-                    const saved = localStorage.getItem('whaleWars_achievements');
-                    if (saved) {
-                        const unlockedIds = JSON.parse(saved);
-                        for (const id of unlockedIds) {
-                            if (this.achievements[id]) {
-                                this.achievements[id].triggered = true;
-                            }
-                        }
-                        console.log('Loaded unlocked achievements:', unlockedIds);
-                    }
-                } catch (e) {
-                    console.error('Error loading achievements:', e);
-                }
-            }
-            
-            saveUnlockedAchievements() {
-                try {
-                    const unlockedIds = Object.values(this.achievements)
-                        .filter(a => a.triggered)
-                        .map(a => a.id);
-                    localStorage.setItem('whaleWars_achievements', JSON.stringify(unlockedIds));
-                } catch (e) {
-                    console.error('Error saving achievements:', e);
-                }
-            }
-            
-            startGame() {
-                // Reset game-specific stats
-                this.stats.fishEaten = 0;
-                this.stats.playersEaten = 0;
-                this.stats.maxSize = 0;
-                this.stats.survivalTime = 0;
-                this.stats.gameStartTime = Date.now();
-            }
-            
-            updateStats(update) {
-                // Update stats based on game events
-                if (update.fishEaten) this.stats.fishEaten += update.fishEaten;
-                if (update.playerEaten) this.stats.playersEaten += 1;
-                if (update.size) this.stats.maxSize = Math.max(this.stats.maxSize, update.size);
-                
-                if (this.stats.gameStartTime) {
-                    this.stats.survivalTime = (Date.now() - this.stats.gameStartTime) / 1000; // in seconds
                 }
                 
-                // Check for achievements
-                this.checkAchievements();
-            }
-            
-            endGame() {
-                // Final stats update at game end
-                this.stats.gameStartTime = null;
-            }
-            
-            checkAchievements() {
-                // Check if any new achievements have been triggered
-                
-                // First Kill achievement
-                if (!this.achievements.firstKill.triggered && this.stats.playersEaten >= 1) {
-                    this.unlockAchievement('firstKill');
-                }
-                
-                // Size 50 achievement
-                if (!this.achievements.sizeFifty.triggered && this.stats.maxSize >= 50) {
-                    this.unlockAchievement('sizeFifty');
-                }
-                
-                // Size 100 achievement
-                if (!this.achievements.sizeHundred.triggered && this.stats.maxSize >= 100) {
-                    this.unlockAchievement('sizeHundred');
-                }
-                
-                // Fish Feast achievement
-                if (!this.achievements.fishFeast.triggered && this.stats.fishEaten >= 20) {
-                    this.unlockAchievement('fishFeast');
-                }
-                
-                // Survivor achievement
-                if (!this.achievements.survivor.triggered && this.stats.survivalTime >= 180) { // 3 minutes
-                    this.unlockAchievement('survivor');
-                }
-                
-                // Mega Whale achievement
-                if (!this.achievements.megaWhale.triggered && this.stats.playersEaten >= 5) {
-                    this.unlockAchievement('megaWhale');
-                }
-            }
-            
-            unlockAchievement(id) {
-                const achievement = this.achievements[id];
-                if (!achievement || achievement.triggered) return;
-                
-                // Mark as triggered
-                achievement.triggered = true;
-                this.saveUnlockedAchievements();
-                
-                // Show notification
-                this.showNotification(achievement);
-                
-                // Log to console
-                console.log(`🏆 [ACHIEVEMENT] Unlocked: ${achievement.title}`);
-            }
-            
-            showNotification(achievement) {
-                if (!this.options.container) return;
-                
-                // Create notification element
-                const notification = document.createElement('div');
-                notification.className = 'achievement';
-                notification.innerHTML = `
-                    <div class="achievement-icon">${achievement.icon}</div>
-                    <div class="achievement-content">
-                        <div class="achievement-title">${achievement.title}</div>
-                        <div class="achievement-description">${achievement.description}</div>
-                        <button class="achievement-share">Share</button>
-                    </div>
-                `;
-                
-                // Add to container
-                this.options.container.appendChild(notification);
-                
-                // Add share button event listener
-                const shareBtn = notification.querySelector('.achievement-share');
-                shareBtn.addEventListener('click', () => {
-                    this.showShareModal(achievement);
-                });
-                
-                // Animate in
-                setTimeout(() => {
-                    notification.classList.add('show');
-                }, 10);
-                
-                // Track active notification
-                this.activeNotifications.push(notification);
-                
-                // Limit max displayed notifications
-                while (this.activeNotifications.length > this.options.maxDisplayed) {
-                    const oldNotification = this.activeNotifications.shift();
-                    this.dismissNotification(oldNotification);
-                }
-                
-                // Auto dismiss after duration
-                setTimeout(() => {
-                    this.dismissNotification(notification);
-                }, this.options.displayDuration);
-            }
-            
-            dismissNotification(notification) {
-                if (!notification) return;
-                
-                notification.classList.remove('show');
-                setTimeout(() => {
-                    if (notification.parentNode === this.options.container) {
-                        this.options.container.removeChild(notification);
-                    }
-                    this.activeNotifications = this.activeNotifications.filter(n => n !== notification);
-                }, 500);
+                return null;
+            } catch (error) {
+                console.error('Error extracting username from URL:', error);
+                return null;
             }
         }
-        
-        // Set up game and achievement system
-        let achievements;
-        
-        // Initialize systems when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize notification system
-            notifications.init();
-            
-            // Initialize achievement system
-            achievements = new AchievementSystem();
-            
-            // Initialize game over screen
-            gameOverScreen.init();
-            
-            // Set up mobile UI enhancements
-            setupMobileUI();
-            
-            // Check for Farcaster authentication and initialize with user identity
-            initializeFarcasterAuth();
-            
-            // Set up invite button
-            setupInviteButton();
-            
-            // Initialize the connection after a short delay
-            setTimeout(() => {
-                connectToServer();
-            }, 500);
-        });
-        
+
         // Automatically authenticate from Farcaster context or create anonymous player
         async function initializeFarcasterAuth() {
             // Set default player info for anonymous play
@@ -1208,6 +879,38 @@
                 avatar: '/icon.png'
             };
             
+            // Check if running in Warpcast environment
+            const isInWarpcast = window.location.href.includes('warpcast.com') || 
+                                document.referrer.includes('warpcast.com');
+            
+            console.log('Starting Farcaster authentication... In Warpcast?', isInWarpcast);
+            
+            // Try extracting from URL for preview tool
+            const urlUser = extractUsernameFromUrl();
+            if (urlUser && urlUser.username) {
+                console.log('✅ User found in URL:', urlUser);
+                window.playerInfo = {
+                    name: urlUser.username,
+                    fid: urlUser.fid || 'preview',
+                    avatar: urlUser.avatar || '/icon.png',
+                    isAuthenticated: true,
+                    isAnonymous: false,
+                    farcasterName: urlUser.username,
+                    verified: urlUser.verified === true,
+                    displayName: urlUser.displayName || urlUser.username
+                };
+                
+                // Store in localStorage for future use
+                localStorage.setItem('farcasterUser', JSON.stringify(urlUser));
+                
+                if (window.onFarcasterAuth) {
+                    window.onFarcasterAuth(window.playerInfo);
+                }
+                
+                notifications.show(`Welcome, ${urlUser.username}!`, 'success', 3000);
+                return;
+            }
+            
             // First, try to use the Frame SDK for authentication
             if (window.frameSdk) {
                 try {
@@ -1215,7 +918,10 @@
                     
                     // Try to get context - this works in Farcaster clients that support the getContext API
                     try {
+                        console.log('Attempting to get frame context...');
                         const context = await window.frameSdk.getContext();
+                        
+                        console.log('Context response:', context);
                         
                         if (context && context.user && context.user.fid) {
                             console.log('✅ User authenticated through Farcaster SDK context:', {
@@ -1247,8 +953,70 @@
                         // Continue to fallback methods
                     }
                     
+                    // Try direct client integration if in Warpcast
+                    if (isInWarpcast) {
+                        console.log('Detected Warpcast environment, attempting direct integration');
+                        try {
+                            // Use Warpcast's window.fc API if available
+                            if (window.fc && typeof window.fc.getCurrentUser === 'function') {
+                                const user = await window.fc.getCurrentUser();
+                                if (user && user.username) {
+                                    console.log('✅ User authenticated via Warpcast fc API:', user);
+                                    
+                                    window.playerInfo = {
+                                        name: user.username,
+                                        fid: user.fid,
+                                        avatar: user.pfp || '/icon.png',
+                                        isAuthenticated: true,
+                                        isAnonymous: false,
+                                        farcasterName: user.username,
+                                        verified: user.verified === true,
+                                        displayName: user.displayName || user.username
+                                    };
+                                    
+                                    if (window.onFarcasterAuth) {
+                                        window.onFarcasterAuth(window.playerInfo);
+                                    }
+                                    
+                                    notifications.show(`Welcome, ${user.username}!`, 'success', 3000);
+                                    return;
+                                }
+                            }
+                        } catch (warpcastError) {
+                            console.log('Warpcast direct integration failed:', warpcastError);
+                            // Continue to message-based auth
+                        }
+                    }
+                    
                     // Fallback to message-based authentication for clients that use it
                     console.log('Falling back to message-based authentication...');
+                    
+                    // Try to directly extract username from URL parameters (some Farcaster clients add this)
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const fidParam = urlParams.get('fid');
+                    const usernameParam = urlParams.get('username');
+                    
+                    if (fidParam && usernameParam) {
+                        console.log(`✅ User authenticated through URL parameters: username=${usernameParam}, fid=${fidParam}`);
+                        
+                        window.playerInfo = {
+                            name: usernameParam,
+                            fid: fidParam,
+                            avatar: urlParams.get('avatar') || '/icon.png',
+                            isAuthenticated: true,
+                            isAnonymous: false,
+                            farcasterName: usernameParam,
+                            verified: urlParams.get('verified') === 'true',
+                            displayName: urlParams.get('displayName') || usernameParam
+                        };
+                        
+                        if (window.onFarcasterAuth) {
+                            window.onFarcasterAuth(window.playerInfo);
+                        }
+                        
+                        notifications.show(`Welcome, ${usernameParam}!`, 'success', 3000);
+                        return;
+                    }
                     
                     // Add a timeout to avoid waiting indefinitely
                     const authTimeout = setTimeout(() => {
@@ -1258,6 +1026,8 @@
                     
                     // Set up message event listener for Farcaster auth
                     const authMessageHandler = (event) => {
+                        console.log('Received message event:', event.data);
+                        
                         // Check if this is a message from Farcaster with user data
                         if (event.data && event.data.source === 'farcaster' && event.data.user) {
                             clearTimeout(authTimeout);
@@ -1293,6 +1063,16 @@
                     };
                     
                     window.addEventListener('message', authMessageHandler);
+                    
+                    // If in Warpcast preview, send a postMessage to try to trigger authentication
+                    if (isInWarpcast) {
+                        try {
+                            console.log('Attempting to request user info from Warpcast via postMessage');
+                            window.parent.postMessage({ type: 'requestUserInfo' }, '*');
+                        } catch (e) {
+                            console.log('Failed to send postMessage to parent:', e);
+                        }
+                    }
                     
                 } catch (error) {
                     console.error('Error in Farcaster authentication setup:', error);
