@@ -677,6 +677,17 @@
         // Make the SDK available globally
         window.frameSdk = sdk;
         
+        // Follow documentation exactly - call ready ASAP
+        (async function() {
+            try {
+                console.log('Initializing Frame SDK and hiding splash screen...');
+                await sdk.actions.ready();
+                console.log('Splash screen hidden');
+            } catch (e) {
+                console.error('Failed to hide splash screen:', e);
+            }
+        })();
+        
         // Check if running in Farcaster client or standalone browser
         function isInFarcasterClient() {
             // Check for URL parameters that might indicate Farcaster client
@@ -692,26 +703,6 @@
             // Heuristic: Farcaster client is likely if any of these are true
             return isFrameParam || isFarcasterReferrer;
         }
-        
-        // Initialize the SDK for Farcaster clients
-        async function initializeSDK() {
-            try {
-                // Only initialize if likely in a Farcaster client
-                if (window.frameSdk && isInFarcasterClient()) {
-                    console.log('Initializing Frame SDK for Farcaster client...');
-                    // Call ready to hide splash screen
-                    await window.frameSdk.actions.ready();
-                    console.log('SDK initialized and splash screen hidden');
-                } else {
-                    console.log('Running in standalone browser, skipping Farcaster SDK initialization');
-                }
-            } catch (e) {
-                console.error('Failed to initialize SDK:', e);
-            }
-        }
-        
-        // Run initialization
-        initializeSDK();
         
         // Function to enhance mobile UI
         function setupMobileUI() {
@@ -1182,7 +1173,7 @@
             try {
                 console.log('⚡️ Initializing Farcaster authentication...');
                 
-                // Listen for Farcaster messages that contain user data
+                // Use the simple event-based approach for authentication
                 window.addEventListener('message', (event) => {
                     // Check if this is a message from Farcaster with user data
                     if (event.data && event.data.source === 'farcaster' && event.data.user) {
@@ -1211,10 +1202,10 @@
                     }
                 });
                 
-                console.log('Waiting for Farcaster user data...');
+                console.log('Waiting for Farcaster user data via message events...');
                 
             } catch (error) {
-                console.error('Error in Farcaster authentication:', error);
+                console.error('Error in Farcaster authentication setup:', error);
                 notifications.show('Running in anonymous mode', 'info', 3000);
             }
         }
