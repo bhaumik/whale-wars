@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Whale Wars</title>
-    <meta name="fc:frame" content='{"version":"vNext","image":{"url":"https://whale-wars.onrender.com/preview.png","aspectRatio":"1.91:1"},"buttons":[{"label":"🎮 Play Now","action":"post_redirect","target":"https://whale-wars.onrender.com"}]}' />
-    <meta property="og:title" content="Whale Wars - Multiplayer Game" />
-    <meta property="og:description" content="Compete with other players to become the largest whale in the ocean!" />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://whale-wars.onrender.com/preview.png","button":{"title":"🐳 Become a Whale","action":{"type":"launch_frame","url":"https://whale-wars.onrender.com?v=1","name":"Whale Wars"}}}' />
+    <meta property="og:title" content="Whale Wars - The Ultimate Whale Status" />
+    <meta property="og:description" content="Grow your whale, swallow smaller players, and claim your status as the biggest whale on Farcaster!" />
     <meta property="og:image" content="https://whale-wars.onrender.com/preview.png" />
     <style>
         body {
@@ -816,27 +816,27 @@
                 this.achievements = {
                     firstKill: {
                         id: 'firstKill',
-                        title: 'First Blood',
+                        title: 'First Swallow',
                         description: 'Devour another player for the first time',
-                        icon: '🩸',
+                        icon: '🐳',
                         triggered: false,
-                        shareText: 'I just got my first player kill in Whale Wars!'
+                        shareText: 'I just swallowed my first player in Whale Wars! My journey to become the biggest whale on Farcaster has begun! 🐳'
                     },
                     sizeFifty: {
                         id: 'sizeFifty',
-                        title: 'Growing Up',
+                        title: 'Growing Whale',
                         description: 'Reach size 50',
                         icon: '🐋',
                         triggered: false,
-                        shareText: 'I grew to size 50 in Whale Wars!'
+                        shareText: 'I grew to size 50 in Whale Wars! Becoming a proper whale on Farcaster! 🐳'
                     },
                     sizeHundred: {
                         id: 'sizeHundred',
                         title: 'Whale Lord',
-                        description: 'Reach size 100',
+                        description: 'Reach size 100 - true whale status',
                         icon: '👑',
                         triggered: false,
-                        shareText: 'I reached size 100 in Whale Wars!'
+                        shareText: 'I\'m officially a WHALE on Farcaster! Reached size 100 in Whale Wars! Even the crypto whales are taking notes! 🐳'
                     },
                     fishFeast: {
                         id: 'fishFeast',
@@ -844,15 +844,23 @@
                         description: 'Eat 20 fish in a single game',
                         icon: '🐟',
                         triggered: false,
-                        shareText: 'I devoured 20 fish in a single game of Whale Wars!'
+                        shareText: 'I devoured 20 fish in a single game of Whale Wars! Growing my whale status on Farcaster! 🐳'
                     },
                     survivor: {
                         id: 'survivor',
-                        title: 'Survivor',
+                        title: 'Sea Survivor',
                         description: 'Stay alive for 3 minutes',
                         icon: '⏱️',
                         triggered: false,
-                        shareText: 'I survived for over 3 minutes in Whale Wars!'
+                        shareText: 'I survived for over 3 minutes as a whale in Whale Wars! The ocean is mine! 🐳'
+                    },
+                    megaWhale: {
+                        id: 'megaWhale',
+                        title: 'Mega Whale',
+                        description: 'Eat 5 players in a single game',
+                        icon: '💰',
+                        triggered: false,
+                        shareText: 'MEGA WHALE STATUS ACHIEVED in Whale Wars! 🐳 I\'m in the top 1% of whales on Farcaster. Swallowed 5 players in one game!'
                     }
                 };
                 
@@ -1004,6 +1012,11 @@
                 if (!this.achievements.survivor.triggered && this.stats.survivalTime >= 180) { // 3 minutes
                     this.unlockAchievement('survivor');
                 }
+                
+                // Mega Whale achievement
+                if (!this.achievements.megaWhale.triggered && this.stats.playersEaten >= 5) {
+                    this.unlockAchievement('megaWhale');
+                }
             }
             
             unlockAchievement(id) {
@@ -1095,17 +1108,78 @@
             // Set up mobile UI enhancements
             setupMobileUI();
             
-            // Hide the splash screen once the app is ready
-            if (window.frameSdk) {
-                window.frameSdk.actions.ready()
-                    .then(() => console.log('App ready, splash screen hidden'))
-                    .catch(err => console.error('Error hiding splash screen:', err));
-            }
+            // Check for Farcaster authentication and initialize with user identity
+            initializeFarcasterAuth();
             
             // ... existing code ...
         });
         
-        // ... existing code ...
+        // Automatically authenticate from Farcaster context
+        async function initializeFarcasterAuth() {
+            if (!window.frameSdk) {
+                console.log('Farcaster SDK not available, running in standalone mode');
+                return;
+            }
+            
+            try {
+                console.log('⚡️ Initializing Farcaster authentication...');
+                
+                // Get Farcaster user context - this automatically authenticates the user in Farcaster clients
+                const context = await window.frameSdk.getContext();
+                
+                if (context.user && context.user.username) {
+                    console.log('✅ User authenticated through Farcaster client:', {
+                        username: context.user.username,
+                        fid: context.user.fid,
+                        pfp: context.user.pfp?.url
+                    });
+                    
+                    // Set player information from Farcaster identity
+                    window.playerInfo = {
+                        name: context.user.username,
+                        fid: context.user.fid,
+                        avatar: context.user.pfp?.url || null,
+                        isAuthenticated: true
+                    };
+                    
+                    // Notify the game that we have authenticated user info
+                    if (window.onFarcasterAuth) {
+                        window.onFarcasterAuth(window.playerInfo);
+                    }
+                    
+                    notifications.show(`Welcome, ${context.user.username}!`, 'success', 3000);
+                } else {
+                    console.log('ℹ️ No Farcaster user data available, using anonymous mode');
+                    
+                    // Set anonymous player info
+                    window.playerInfo = {
+                        name: `Whale${Math.floor(Math.random() * 1000)}`,
+                        isAuthenticated: false
+                    };
+                }
+                
+                // Hide the splash screen once the app is ready and user is processed
+                await window.frameSdk.actions.ready();
+                console.log('App ready, splash screen hidden');
+                
+            } catch (error) {
+                console.error('Error in Farcaster authentication:', error);
+                notifications.show('Error connecting to Farcaster', 'warning');
+                
+                // Fall back to anonymous player
+                window.playerInfo = {
+                    name: `Whale${Math.floor(Math.random() * 1000)}`,
+                    isAuthenticated: false
+                };
+                
+                // Still hide splash screen on error
+                try {
+                    await window.frameSdk.actions.ready();
+                } catch (e) {
+                    console.error('Error hiding splash screen:', e);
+                }
+            }
+        }
         
         // Game events to trigger achievements
         function updateAchievements(event) {
@@ -1230,17 +1304,20 @@
                 try {
                     if (window.frameSdk) {
                         // Generate share text based on stats
-                        let shareText = `I just played Whale Wars! Final size: ${Math.round(this.stats.finalSize)}`;
+                        let shareText;
                         
-                        if (this.stats.playersEaten > 0) {
-                            shareText += `, devoured ${this.stats.playersEaten} player${this.stats.playersEaten > 1 ? 's' : ''}`;
-                        }
-                        
-                        // Add death info if available
                         if (this.stats.deathType === 'player' && this.stats.killedBy) {
-                            shareText += `. Eaten by ${this.stats.killedBy}!`;
-                        } else if (this.stats.deathType === 'boundary') {
-                            shareText += `. Died by hitting the boundary!`;
+                            // Player was eaten by someone else
+                            shareText = `I just got swallowed by @${this.stats.killedBy} in Whale Wars! 🐳 Turns out I wasn't whale enough...`;
+                        } else if (this.stats.playersEaten >= 5) {
+                            // Player was a dominant whale
+                            shareText = `I was a MEGA WHALE on Farcaster! 🐳 Swallowed ${this.stats.playersEaten} players and reached size ${Math.round(this.stats.finalSize)} in Whale Wars!`;
+                        } else if (this.stats.finalSize >= 100) {
+                            // Player reached impressive size
+                            shareText = `I'm officially a whale on Farcaster! 🐳 Reached size ${Math.round(this.stats.finalSize)} in Whale Wars. The ocean trembles as I swim by!`;
+                        } else {
+                            // Default message
+                            shareText = `I just played Whale Wars and reached size ${Math.round(this.stats.finalSize)} on Farcaster! 🐳 ${this.stats.playersEaten > 0 ? `Swallowed ${this.stats.playersEaten} players!` : 'Still growing...'}`;
                         }
                         
                         // Create a frame for sharing via Farcaster using updated SDK

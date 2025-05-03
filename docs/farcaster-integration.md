@@ -26,7 +26,16 @@ This file is required for domain verification and Mini App configuration:
     "buttonTitle": "🎮 Play Now",
     "splashImageUrl": "https://whale-wars.onrender.com/icon.png",
     "splashBackgroundColor": "#0066cc",
-    "webhookUrl": "https://whale-wars.onrender.com/api/webhook"
+    "webhookUrl": "https://whale-wars.onrender.com/api/webhook",
+    "subtitle": "Become the biggest whale on Farcaster",
+    "description": "Compete in this multiplayer battle to become the ultimate whale on Farcaster! Grow your whale by consuming smaller players - a playful nod to crypto whale status, but with actual whales!",
+    "primaryCategory": "games",
+    "tags": ["game", "multiplayer", "battle", "crypto", "whales"],
+    "heroImageUrl": "https://whale-wars.onrender.com/hero.png",
+    "tagline": "Are you whale enough?",
+    "ogTitle": "Whale Wars - The Ultimate Whale Status",
+    "ogDescription": "Grow your whale, swallow smaller players, and claim your status as the biggest whale on Farcaster!",
+    "ogImageUrl": "https://whale-wars.onrender.com/og.png"
   }
 }
 ```
@@ -36,90 +45,200 @@ This file is required for domain verification and Mini App configuration:
 In `index.html`, we include the necessary meta tag for Farcaster frame integration:
 
 ```html
-<meta name="fc:frame" content='{"version":"next","imageUrl":"https://whale-wars.onrender.com/preview.png","button":{"title":"🎮 Start","action":{"type":"launch_frame","url":"https://whale-wars.onrender.com?v=1","name":"Whale Wars"}}}' />
+<meta name="fc:frame" content='{"version":"next","imageUrl":"https://whale-wars.onrender.com/preview.png","button":{"title":"🐳 Become a Whale","action":{"type":"launch_frame","url":"https://whale-wars.onrender.com?v=1","name":"Whale Wars"}}}' />
 ```
 
-## Detecting Farcaster Environment
+## Using the Frame SDK
 
-The game detects whether it's running within a Farcaster Mini App environment:
+We use the official Farcaster Frame SDK to integrate with the Farcaster ecosystem. For users already logged into a Farcaster client (like Warpcast), we automatically use their identity without requiring additional authentication:
 
 ```javascript
-// Attempt to get Mini App context
-try {
-    console.log('⚡️ Attempting to get Mini App context...');
-    window.addEventListener('message', (event) => {
-        if (event.data && event.data.source === 'farcaster') {
-            console.log('✅ Running in Mini App environment:', {
-                user: event.data.user
-            });
-            
-            // Use Farcaster user info for player data
-            const { user } = event.data;
-            if (user && user.username) {
-                this.playerInfo.name = user.username;
-                this.playerInfo.fid = user.fid;
-            }
-            
-            // Initialize game with Farcaster context
-            this.initializeGame();
-        }
-    });
-} catch (e) {
+// Import the SDK
+import { sdk } from '@farcaster/frame-sdk';
+
+// Initialize the game with automatic user authentication
+async function initGame() {
+  try {
+    // Get user context - this automatically provides user info when 
+    // opened in a Farcaster client without requiring explicit login
+    const context = await sdk.getContext();
+    
+    if (context.user && context.user.username) {
+      console.log('✅ User already authenticated through Farcaster client:', {
+        username: context.user.username,
+        fid: context.user.fid
+      });
+      
+      // Use Farcaster user info for player data
+      this.playerInfo = {
+        name: context.user.username,
+        fid: context.user.fid,
+        // If available, use the user's profile picture as their avatar
+        avatar: context.user.pfp?.url || this.defaultAvatar
+      };
+      
+      // User is already authenticated, no further login needed
+      this.isAuthenticated = true;
+    } else {
+      console.log('⚠️ No user context available, using anonymous mode');
+      // Handle anonymous mode or optional explicit login
+      this.playerInfo = {
+        name: `Whale${Math.floor(Math.random() * 1000)}`,
+        avatar: this.defaultAvatar
+      };
+    }
+    
+    // Hide splash screen when game is ready
+    await sdk.actions.ready();
+    
+    // Initialize game with user context
+    this.initializeGame();
+  } catch (e) {
     console.log('🌐 Running in standalone web environment', e);
     // Fall back to standalone mode
-    this.initializeGame();
+    this.handleStandaloneMode();
+  }
 }
 ```
 
+## Authentication Flow
+
+For Whale Wars, we use a multi-tier authentication approach:
+
+1. **Farcaster Client Auth (Automatic)**: When the game is opened in a Farcaster client (Warpcast, Coinbase Wallet), we automatically retrieve the user's identity from the client context - no login required.
+
+2. **Standalone Web Mode**: Only when the game is accessed directly through a web browser (outside a Farcaster client) do we offer explicit login options:
+
+```javascript
+async function handleAuthentication() {
+  // First try to get context - this works automatically in Farcaster clients
+  try {
+    const context = await sdk.getContext();
+    
+    if (context.user && context.user.fid) {
+      // User is already authenticated through Farcaster client
+      return {
+        authenticated: true,
+        user: context.user
+      };
+    }
+  } catch (e) {
+    console.log('Context retrieval failed, might be outside Farcaster client');
+  }
+  
+  // If we're here, we're likely not in a Farcaster client
+  // Show login options ONLY for standalone web visitors
+  if (this.isStandaloneMode) {
+    this.showLoginOptions();
+  } else {
+    // Still in a Farcaster client but couldn't get context
+    // Proceed with anonymous play
+    return createAnonymousSession();
+  }
+}
+```
+
+This ensures that users already in a Farcaster client have a seamless experience without additional login prompts, while standalone web users still have authentication options.
+
 ## Using Farcaster User Information
 
-When detected in a Farcaster environment, the game uses the user's Farcaster identity:
+When automatically authenticated in a Farcaster environment, the game uses the user's Farcaster identity:
 
 1. Username as player name
 2. FID (Farcaster ID) for unique identification
 3. Profile picture as player avatar (if available)
 
-## API Webhook Integration
+## Social Sharing Integration
 
-The game's server includes a webhook endpoint to handle Farcaster Mini App interactions:
+We enable players to share their achievements and game results with playful whale-themed messages:
 
 ```javascript
-app.post('/api/webhook', express.json(), (req, res) => {
-    const { body } = req;
+async function shareGameResults(score, rank, killedBy) {
+  try {
+    let text;
     
-    // Process Farcaster webhook data
-    if (body && body.untrustedData && body.untrustedData.buttonIndex) {
-        // Handle button interactions
-        const buttonIndex = body.untrustedData.buttonIndex;
-        // Process based on button pressed
+    if (killedBy) {
+      // Player was eaten by someone else
+      text = `I just got swallowed by @${killedBy} in Whale Wars! 🐳 Turns out I wasn't whale enough...`;
+    } else if (rank === 1) {
+      // Player was the top whale
+      text = `I'm officially the BIGGEST whale on Farcaster! 🐳 Swallowed ${score} players in Whale Wars. Who dares challenge me?`;
+    } else {
+      // Player was ranked but not first
+      text = `I was the ${rank}${getRankSuffix(rank)} biggest whale on Farcaster with ${score} points in Whale Wars! 🐳 Still growing...`;
     }
     
-    // Return a response to Farcaster
-    res.status(200).json({
-        message: "Success",
-        buttons: [
-            {
-                label: "Play Again",
-                action: "post_redirect"
-            }
-        ]
+    const embeds = [`https://whale-wars.onrender.com/share?score=${score}&rank=${rank}`];
+    
+    await sdk.actions.composeCast({
+      text,
+      embeds
     });
-});
+  } catch (error) {
+    console.error('Error sharing results:', error);
+  }
+}
+
+// Helper function for rank suffixes (1st, 2nd, 3rd, etc.)
+function getRankSuffix(rank) {
+  if (rank % 10 === 1 && rank !== 11) return 'st';
+  if (rank % 10 === 2 && rank !== 12) return 'nd';
+  if (rank % 10 === 3 && rank !== 13) return 'rd';
+  return 'th';
+}
+
+// Custom sharing for different achievements
+async function shareWhaleAchievement(achievementType) {
+  try {
+    let text;
+    
+    switch (achievementType) {
+      case 'first-whale':
+        text = `I just consumed my first player in Whale Wars! My journey to become the biggest whale on Farcaster has begun! 🐳`;
+        break;
+      case 'whale-spree':
+        text = `I'm on a whale spree! Swallowed 5 players in a row in Whale Wars! 🐳 The ocean trembles as I swim by!`;
+        break;
+      case 'mega-whale':
+        text = `MEGA WHALE STATUS ACHIEVED! 🐳 I'm in the top 1% of whales on Farcaster. Even the crypto whales are taking notes!`;
+        break;
+      default:
+        text = `Just made a splash in Whale Wars! 🐳 Swimming my way to the top of Farcaster!`;
+    }
+    
+    const embeds = [`https://whale-wars.onrender.com/share?achievement=${achievementType}`];
+    
+    await sdk.actions.composeCast({
+      text,
+      embeds
+    });
+  } catch (error) {
+    console.error('Error sharing achievement:', error);
+  }
+}
 ```
+
+## Cross-Client Compatibility
+
+The game is optimized to work across different Farcaster clients:
+
+1. **Warpcast**: Primary client with full feature support
+2. **Coinbase Wallet**: Optimized for the in-app wallet integration
+3. **Other clients**: Graceful fallback for basic functionality
 
 ## Development Considerations
 
-1. **Testing**: Always test both in Farcaster environment and standalone mode
+1. **Testing**: Always test in multiple Farcaster clients (Warpcast, Coinbase Wallet)
 2. **Versioning**: Use URL parameters for version tracking (`?v=1`)
 3. **Performance**: Optimize for mobile devices as most Farcaster users are on mobile
 4. **Error Handling**: Gracefully handle cases where Farcaster context is unavailable
 
 ## Weekly Developer Rewards
 
-Whale Wars participates in the Farcaster developer rewards program. Performance metrics such as engagement and user retention contribute to rankings in the weekly rewards distribution.
+Whale Wars participates in the Farcaster developer rewards program. Performance metrics such as engagement and user retention contribute to rankings in the weekly rewards distribution, which are refreshed every Wednesday at 17:00 UTC.
 
 ## Useful Links
 
-- [Farcaster Mini Apps Documentation](https://docs.farcaster.xyz/reference/mini-apps/specification)
-- [Warpcast API Documentation](https://docs.farcaster.xyz/reference/warpcast/api)
-- [Developer Rewards Documentation](https://docs.farcaster.xyz/reference/warpcast/api#get-developer-reward-winners) 
+- [Farcaster Mini Apps Documentation](https://miniapps.farcaster.xyz/)
+- [Frame SDK GitHub Repository](https://github.com/farcasterxyz/miniapps)
+- [Mini Apps Developer Chat](https://warpcast.com/~/developers/frames) 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains comprehensive documentation for the Whale Wars multiplayer game. Whale Wars is a browser-based game where players control whales, eat fish to grow larger, and compete with other players. The goal is to be the biggest whale on Farcaster
+This directory contains comprehensive documentation for the Whale Wars multiplayer game. Whale Wars is a browser-based game where players control whales, eat smaller players to grow larger, and compete to become the biggest whale on Farcaster. The game is a playful take on the crypto term "whale" (large holders) but with actual whales that grow in size as they consume others.
 
 ## Documentation Files
 
@@ -14,20 +14,29 @@ This directory contains comprehensive documentation for the Whale Wars multiplay
 
 ### Farcaster Integration
 
-- [Farcaster Mini Apps](farcaster-mini-apps.md) - General documentation about Farcaster Mini Apps specifications and requirements
-- [Farcaster Integration](farcaster-integration.md) - Specific implementation details for how Whale Wars integrates with Farcaster
-- [Updating Farcaster Configuration](farcaster-updates.md) - Guide for updating the Farcaster Mini App configuration
+- [Farcaster Mini Apps](farcaster-mini-apps.md) - Documentation about Farcaster Mini Apps specifications, features, and SDK
+- [Farcaster Integration](farcaster-integration.md) - Implementation details for how Whale Wars integrates with Farcaster
+- [Updating Farcaster Configuration](farcaster-updates.md) - Guide for updating the Farcaster Mini App configuration and metadata
 - [Mobile Optimization](mobile-optimization.md) - Optimizations for mobile-like view in Farcaster Mini Apps
 
 ### Debugging and Troubleshooting
 
 - [WebSocket Debugging](websocket-debugging.md) - Guide for diagnosing and fixing WebSocket connection issues
 
+## Game Concept
+
+Whale Wars plays on a double meaning:
+
+1. **Literal Whales**: Players control whale characters that grow larger as they consume other players and food
+2. **Crypto Whales**: A nod to the crypto term for large holders, as players aim to become the "biggest whale" on Farcaster
+
+Players start small and must strategically eat smaller players while avoiding larger ones. The social sharing features allow players to brag about their whale status or commiserate about being swallowed by larger whales.
+
 ## Quick References
 
 ### Configuration Files
 
-- `public/.well-known/farcaster.json` - Farcaster Mini App configuration file
+- `public/.well-known/farcaster.json` - Farcaster Mini App configuration and metadata
 - `index.html` - Main game file with Farcaster frame metadata
 - `server.js` - Server implementation with WebSocket and Express.js
 - `package.json` - Project dependencies
@@ -38,6 +47,25 @@ This directory contains comprehensive documentation for the Whale Wars multiplay
 - `express` - Web server framework
 - `cors` - Cross-origin resource sharing middleware
 - `uuid` - For generating unique identifiers
+- `@farcaster/frame-sdk` - Official Farcaster SDK for Mini Apps
+
+### Farcaster SDK Features
+
+The game uses the official Farcaster Frame SDK to:
+- Access user information
+- Enable social sharing of whale-themed achievements
+- Authenticate users
+- Control the splash screen
+- Handle navigation between screens
+- Support wallet interactions
+
+### Social Sharing Features
+
+Players can share different achievements and game states:
+- Being the biggest whale on Farcaster
+- Getting swallowed by another player
+- Achieving a high rank among whales
+- Going on a "whale spree" (consuming multiple players in succession)
 
 ### Deployment
 
@@ -57,6 +85,15 @@ startCommand: node server.js
 2. Install dependencies with `npm install`
 3. Run the development server with `npm start`
 4. Access the game at http://localhost:8080
+5. Test across multiple Farcaster clients
+
+## Cross-Client Compatibility
+
+The game is optimized to work across different Farcaster clients:
+
+1. **Warpcast**: Primary client with full feature support
+2. **Coinbase Wallet**: Optimized for the in-app wallet integration
+3. **Other clients**: Graceful fallback for basic functionality
 
 ## Debugging
 
@@ -69,8 +106,10 @@ Check the browser console and server logs for detailed metrics and error informa
 
 ## External Resources
 
-- [Official Farcaster MiniApps Repository](https://github.com/farcasterxyz/miniapps) - Examples and official utilities for building Mini Apps
-- [Farcaster Documentation](https://docs.farcaster.xyz/) - Official Farcaster documentation
+- [Farcaster Mini Apps Documentation](https://miniapps.farcaster.xyz/)
+- [Frame SDK GitHub Repository](https://github.com/farcasterxyz/miniapps)
+- [Mini Apps Developer Chat](https://warpcast.com/~/developers/frames)
+- [What's New in the SDK](https://miniapps.farcaster.xyz/docs/sdk/changelog)
 
 ## Contributing
 
