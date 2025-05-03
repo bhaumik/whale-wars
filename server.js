@@ -15,6 +15,63 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
+// Add body parser middleware for JSON
+app.use(express.json());
+
+// Farcaster webhook endpoint
+app.post('/api/webhook', (req, res) => {
+    console.log('📱 [FARCASTER] Webhook request received:', req.body);
+    
+    try {
+        const { untrustedData } = req.body;
+        
+        if (!untrustedData) {
+            return res.status(400).json({ 
+                error: 'Missing untrustedData' 
+            });
+        }
+        
+        const { fid, buttonIndex, state } = untrustedData;
+        console.log(`📱 [FARCASTER] User ${fid} pressed button ${buttonIndex} with state:`, state);
+        
+        // Default response with game preview
+        const response = {
+            image: {
+                url: "https://whale-wars.onrender.com/preview.png",
+                aspectRatio: "1.91:1"
+            },
+            buttons: [
+                {
+                    label: "🎮 Play Now",
+                    action: "post_redirect",
+                    target: "https://whale-wars.onrender.com?v=2"
+                }
+            ]
+        };
+        
+        // If this is a callback from a Start Game button
+        if (buttonIndex === 1 && state?.gameState === "new") {
+            // Game has started, update response
+            response.image.url = "https://whale-wars.onrender.com/preview.png";
+            response.buttons = [
+                {
+                    label: "Continue Playing",
+                    action: "post_redirect",
+                    target: "https://whale-wars.onrender.com?v=2"
+                }
+            ];
+        }
+        
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('❌ [FARCASTER] Webhook error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            details: error.message
+        });
+    }
+});
+
 // Explicit route for Farcaster manifest
 app.get('/.well-known/farcaster.json', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', '.well-known', 'farcaster.json'));
@@ -322,6 +379,14 @@ wss.on('connection', (ws) => {
                                 }));
                             }
                         });
+                    }
+                    break;
+
+                case 'ping':
+                    // Respond with pong message
+                    if (player.ws && player.ws.readyState === WebSocket.OPEN) {
+                        player.ws.send(JSON.stringify({ type: 'pong' }));
+                        metrics.messagesSent++;
                     }
                     break;
             }

@@ -5,14 +5,21 @@
     "signature": "MHgwZDQwZDdjYjY2NThjODA3Mzg0NTViMTIxYWEyNTMxYjBkMDYzN2Y2OGY5NDg3MDk0NWUwNDkwNGMwYjFhN2U0MzYwMTg2ZWE1N2VkYTMzM2IxYTgyMGZlNDRlZjA0YjcyZTFlMzc5MjgzOGJiM2Y5ZGI1NGZhYzRmODE5N2RiOTFj"
   },
   "frame": {
-    "version": "1",
+    "version": "2",
     "name": "Whale Wars",
+    "description": "Compete with other players to become the largest whale in the ocean! Eat fish to grow and watch out for other players.",
     "iconUrl": "https://whale-wars.onrender.com/icon.png",
     "homeUrl": "https://whale-wars.onrender.com",
     "imageUrl": "https://whale-wars.onrender.com/preview.png",
     "buttonTitle": "🎮 Play Now",
     "splashImageUrl": "https://whale-wars.onrender.com/icon.png",
     "splashBackgroundColor": "#0066cc",
-    "webhookUrl": "https://whale-wars.onrender.com/api/webhook"
+    "webhookUrl": "https://whale-wars.onrender.com/api/webhook",
+    "callToAction": "Become the mightiest whale!",
+    "categories": ["games", "multiplayer", "arcade"],
+    "defaultAction": "launch_frame",
+    "inputText": false,
+    "orientation": "portrait",
+    "persistentStateEnabled": true
   }
 } 
