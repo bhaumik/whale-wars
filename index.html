@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Whale Wars</title>
-    <meta name="fc:frame" content='{"version":"vNext","image":{"url":"https://whale-wars.onrender.com/preview.png","aspectRatio":"1.91:1"},"buttons":[{"label":"🎮 Play Now","action":"post_redirect","target":"https://whale-wars.onrender.com?v=2"}],"frames":[{"title":"Whale Wars","image":{"url":"https://whale-wars.onrender.com/icon.png"},"state":{"gameState":"new"},"buttons":[{"label":"Start Game","action":"post"}]}]}' />
+    <meta name="fc:frame" content='{"version":"vNext","image":{"url":"https://whale-wars.onrender.com/preview.png","aspectRatio":"1.91:1"},"buttons":[{"label":"🎮 Play Now","action":"post_redirect","target":"https://whale-wars.onrender.com"}]}' />
+    <meta property="og:title" content="Whale Wars - Multiplayer Game" />
+    <meta property="og:description" content="Compete with other players to become the largest whale in the ocean!" />
+    <meta property="og:image" content="https://whale-wars.onrender.com/preview.png" />
     <style>
         body {
             margin: 0;
@@ -668,7 +671,11 @@
     </div>
 
     <script type="module">
+        // Import the SDK from CDN for direct browser usage
         import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+        
+        // Make the SDK available globally
+        window.frameSdk = sdk;
         
         // Function to enhance mobile UI
         function setupMobileUI() {
@@ -879,23 +886,21 @@
                     if (!currentAchievement) return;
                     
                     try {
-                        if (window.farcaster && sdk) {
+                        if (window.frameSdk) {
                             const shareText = currentAchievement.shareText || 
                                 `I unlocked the "${currentAchievement.title}" achievement in Whale Wars!`;
                             
-                            // Create a frame for sharing via Farcaster
-                            await sdk.publishCast({
+                            // Create a frame for sharing via Farcaster using updated SDK
+                            await window.frameSdk.actions.composeCast({
                                 text: shareText,
                                 embeds: [
-                                    {
-                                        url: `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
-                                    }
+                                    `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
                                 ]
                             });
                             
                             notifications.show('Shared to Farcaster!', 'success');
                         } else {
-                            // Fallback for when Farcaster isn't available
+                            // Fallback for when Farcaster SDK isn't available
                             console.log('Farcaster SDK not available, opening sharing URL');
                             window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
                         }
@@ -1090,6 +1095,13 @@
             // Set up mobile UI enhancements
             setupMobileUI();
             
+            // Hide the splash screen once the app is ready
+            if (window.frameSdk) {
+                window.frameSdk.actions.ready()
+                    .then(() => console.log('App ready, splash screen hidden'))
+                    .catch(err => console.error('Error hiding splash screen:', err));
+            }
+            
             // ... existing code ...
         });
         
@@ -1216,7 +1228,7 @@
             // Share game stats to Farcaster
             async shareStats() {
                 try {
-                    if (window.farcaster && sdk) {
+                    if (window.frameSdk) {
                         // Generate share text based on stats
                         let shareText = `I just played Whale Wars! Final size: ${Math.round(this.stats.finalSize)}`;
                         
@@ -1231,19 +1243,17 @@
                             shareText += `. Died by hitting the boundary!`;
                         }
                         
-                        // Create a frame for sharing via Farcaster
-                        await sdk.publishCast({
+                        // Create a frame for sharing via Farcaster using updated SDK
+                        await window.frameSdk.actions.composeCast({
                             text: shareText,
                             embeds: [
-                                {
-                                    url: `https://whale-wars.onrender.com/api/gamestats?size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`
-                                }
+                                `https://whale-wars.onrender.com/api/gamestats?size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`
                             ]
                         });
                         
                         notifications.show('Shared to Farcaster!', 'success');
                     } else {
-                        // Fallback for when Farcaster isn't available
+                        // Fallback for when Farcaster SDK isn't available
                         console.log('Farcaster SDK not available, opening sharing URL');
                         
                         const shareUrl = `https://whale-wars.onrender.com?share=stats&size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`;

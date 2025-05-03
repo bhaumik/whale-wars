@@ -5,10 +5,19 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
 const app = express();
+
+// Configure CORS for Farcaster Mini App compatibility
 app.use(cors({
-    origin: ['https://whale-wars.onrender.com', 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
-    credentials: true
+    // Allow specific origins for better security while supporting Farcaster clients
+    origin: [
+        'https://whale-wars.onrender.com', 
+        'http://localhost:3000',
+        'https://warpcast.com', 
+        'https://*.warpcast.com'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Serve static files
@@ -17,6 +26,24 @@ app.use(express.static(__dirname));
 
 // Add body parser middleware for JSON
 app.use(express.json());
+
+// Add security headers middleware for Farcaster Mini App compatibility
+app.use((req, res, next) => {
+    // Set Content-Security-Policy to allow execution in Farcaster frames
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh; " +
+        "connect-src 'self' wss://whale-wars.onrender.com ws://whale-wars.onrender.com https://*.warpcast.com wss://*.warpcast.com; " +
+        "img-src 'self' data: https:; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "frame-ancestors 'self' https://*.warpcast.com https://warpcast.com;"
+    );
+    
+    // Set frame-ancestors specifically for Farcaster
+    res.setHeader('X-Frame-Options', 'ALLOW-FROM https://warpcast.com');
+    
+    next();
+});
 
 // Rate limiting system
 const rateLimits = {
@@ -411,7 +438,7 @@ app.post('/api/webhook', (req, res) => {
     console.log('📱 [FARCASTER] Webhook request received:', req.body);
     
     try {
-        const { untrustedData } = req.body;
+        const { untrustedData, trustedData } = req.body;
         
         if (!untrustedData) {
             return res.status(400).json({ 
@@ -422,8 +449,9 @@ app.post('/api/webhook', (req, res) => {
         const { fid, buttonIndex, state } = untrustedData;
         console.log(`📱 [FARCASTER] User ${fid} pressed button ${buttonIndex} with state:`, state);
         
-        // Default response with game preview
+        // Following updated Farcaster Mini App specification for frame responses
         const response = {
+            version: "vNext",
             image: {
                 url: "https://whale-wars.onrender.com/preview.png",
                 aspectRatio: "1.91:1"
@@ -432,22 +460,28 @@ app.post('/api/webhook', (req, res) => {
                 {
                     label: "🎮 Play Now",
                     action: "post_redirect",
-                    target: "https://whale-wars.onrender.com?v=2"
+                    target: `https://whale-wars.onrender.com?fid=${fid || ""}`
                 }
             ]
         };
         
-        // If this is a callback from a Start Game button
-        if (buttonIndex === 1 && state?.gameState === "new") {
-            // Game has started, update response
-            response.image.url = "https://whale-wars.onrender.com/preview.png";
-            response.buttons = [
-                {
-                    label: "Continue Playing",
-                    action: "post_redirect",
-                    target: "https://whale-wars.onrender.com?v=2"
-                }
-            ];
+        // Handle button interactions based on index
+        if (buttonIndex === 1) {
+            if (state?.gameState === "new") {
+                // Game has started
+                response.buttons = [
+                    {
+                        label: "Continue Playing",
+                        action: "post_redirect",
+                        target: `https://whale-wars.onrender.com?fid=${fid || ""}`
+                    },
+                    {
+                        label: "🏆 View Leaderboard",
+                        action: "post_redirect",
+                        target: "https://whale-wars.onrender.com/leaderboard"
+                    }
+                ];
+            }
         }
         
         res.status(200).json(response);
@@ -463,6 +497,56 @@ app.post('/api/webhook', (req, res) => {
 // Explicit route for Farcaster manifest
 app.get('/.well-known/farcaster.json', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', '.well-known', 'farcaster.json'));
+});
+
+// Add dedicated endpoint for Farcaster Frame integration
+app.get('/frame', (req, res) => {
+    // Serve a simplified HTML that works well in Farcaster frames
+    const html = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Whale Wars</title>
+            <meta name="fc:frame" content='{"version":"vNext","image":{"url":"https://whale-wars.onrender.com/preview.png","aspectRatio":"1.91:1"},"buttons":[{"label":"🎮 Play Now","action":"post_redirect","target":"https://whale-wars.onrender.com"}]}' />
+            <meta property="og:title" content="Whale Wars - Multiplayer Game" />
+            <meta property="og:description" content="Compete with other players to become the largest whale in the ocean!" />
+            <meta property="og:image" content="https://whale-wars.onrender.com/preview.png" />
+            <style>
+                body { margin: 0; padding: 0; background: linear-gradient(180deg, #87CEEB 0%, #1E90FF 100%); height: 100vh; display: flex; align-items: center; justify-content: center; color: white; font-family: sans-serif; }
+                .container { text-align: center; }
+                h1 { font-size: 3rem; margin-bottom: 1rem; }
+                p { font-size: 1.2rem; margin-bottom: 2rem; }
+                .button { display: inline-block; background: #0066cc; color: white; padding: 1rem 2rem; text-decoration: none; border-radius: 0.5rem; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🐋 Whale Wars</h1>
+                <p>Compete with other players to become the largest whale in the ocean!</p>
+                <a href="https://whale-wars.onrender.com" class="button">Play Now</a>
+            </div>
+            
+            <!-- Inline frame-sdk import script -->
+            <script type="module">
+                import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+                
+                // Hide splash screen when page is loaded
+                window.addEventListener('load', async () => {
+                    try {
+                        await sdk.actions.ready();
+                        console.log('Frame ready, splash screen hidden');
+                    } catch (err) {
+                        console.error('Error hiding splash screen:', err);
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `;
+    
+    res.send(html);
 });
 
 // Root route should serve the game

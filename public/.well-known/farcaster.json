@@ -5,7 +5,7 @@
     "signature": "MHgwZDQwZDdjYjY2NThjODA3Mzg0NTViMTIxYWEyNTMxYjBkMDYzN2Y2OGY5NDg3MDk0NWUwNDkwNGMwYjFhN2U0MzYwMTg2ZWE1N2VkYTMzM2IxYTgyMGZlNDRlZjA0YjcyZTFlMzc5MjgzOGJiM2Y5ZGI1NGZhYzRmODE5N2RiOTFj"
   },
   "frame": {
-    "version": "2",
+    "version": "vNext",
     "name": "Whale Wars",
     "description": "Compete with other players to become the largest whale in the ocean! Eat fish to grow and watch out for other players.",
     "iconUrl": "https://whale-wars.onrender.com/icon.png",
@@ -19,7 +19,6 @@
     "categories": ["games", "multiplayer", "arcade"],
     "defaultAction": "launch_frame",
     "inputText": false,
-    "orientation": "portrait",
-    "persistentStateEnabled": true
+    "orientation": "portrait"
   }
 } 
