@@ -677,13 +677,34 @@
         // Make the SDK available globally
         window.frameSdk = sdk;
         
-        // Initialize the SDK immediately 
+        // Check if running in Farcaster client or standalone browser
+        function isInFarcasterClient() {
+            // Check for URL parameters that might indicate Farcaster client
+            const urlParams = new URLSearchParams(window.location.search);
+            const isFrameParam = urlParams.has('fc') || urlParams.has('farcaster');
+            
+            // Check for referrer that might indicate Farcaster client
+            const referrer = document.referrer || '';
+            const isFarcasterReferrer = referrer.includes('warpcast.com') || 
+                                        referrer.includes('farcaster.xyz') || 
+                                        referrer.includes('frames.fc');
+            
+            // Heuristic: Farcaster client is likely if any of these are true
+            return isFrameParam || isFarcasterReferrer;
+        }
+        
+        // Initialize the SDK for Farcaster clients
         async function initializeSDK() {
             try {
-                console.log('Initializing Frame SDK...');
-                // Call ready first thing to hide splash screen
-                await window.frameSdk.actions.ready();
-                console.log('SDK initialized and splash screen hidden');
+                // Only initialize if likely in a Farcaster client
+                if (window.frameSdk && isInFarcasterClient()) {
+                    console.log('Initializing Frame SDK for Farcaster client...');
+                    // Call ready to hide splash screen
+                    await window.frameSdk.actions.ready();
+                    console.log('SDK initialized and splash screen hidden');
+                } else {
+                    console.log('Running in standalone browser, skipping Farcaster SDK initialization');
+                }
             } catch (e) {
                 console.error('Failed to initialize SDK:', e);
             }
@@ -909,23 +930,37 @@
                     if (!currentAchievement) return;
                     
                     try {
-                        if (window.frameSdk) {
-                            const shareText = currentAchievement.shareText || 
+                        // Check if we're in a Farcaster client and authenticated
+                        if (window.frameSdk && (window.playerInfo?.isAuthenticated || isInFarcasterClient())) {
+                            let shareText = currentAchievement.shareText || 
                                 `I unlocked the "${currentAchievement.title}" achievement in Whale Wars!`;
                             
-                            // Create a frame for sharing via Farcaster using updated SDK
-                            await window.frameSdk.actions.composeCast({
-                                text: shareText,
-                                embeds: [
-                                    `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
-                                ]
-                            });
+                            // Add anonymous player name if available
+                            if (window.playerInfo?.isAnonymous && window.playerInfo?.name) {
+                                shareText = `${window.playerInfo.name} ${shareText}`;
+                            }
                             
-                            notifications.show('Shared to Farcaster!', 'success');
+                            try {
+                                // Create a frame for sharing via Farcaster using updated SDK
+                                await window.frameSdk.actions.composeCast({
+                                    text: shareText,
+                                    embeds: [
+                                        `https://whale-wars.onrender.com/api/achievement?id=${currentAchievement.id}`
+                                    ]
+                                });
+                                
+                                notifications.show('Shared to Farcaster!', 'success');
+                            } catch (sdkError) {
+                                console.error('SDK sharing error:', sdkError);
+                                // Fall back to URL sharing
+                                window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
+                                notifications.show('Opened sharing link', 'info');
+                            }
                         } else {
-                            // Fallback for when Farcaster SDK isn't available
+                            // Fallback for anonymous mode or standalone browser
                             console.log('Farcaster SDK not available, opening sharing URL');
                             window.open(`https://whale-wars.onrender.com?share=${currentAchievement.id}`, '_blank');
+                            notifications.show('Opened sharing link', 'info');
                         }
                     } catch (error) {
                         console.error('Error sharing to Farcaster:', error);
@@ -1129,13 +1164,21 @@
             // ... existing code ...
         });
         
-        // Automatically authenticate from Farcaster context
+        // Automatically authenticate from Farcaster context or create anonymous player
         async function initializeFarcasterAuth() {
-            if (!window.frameSdk) {
-                console.log('Farcaster SDK not available, running in standalone mode');
+            // Set default player info for anonymous play
+            window.playerInfo = {
+                name: `Whale${Math.floor(Math.random() * 1000)}`,
+                isAuthenticated: false,
+                isAnonymous: true
+            };
+            
+            // Skip Farcaster auth in standalone mode
+            if (!window.frameSdk || !isInFarcasterClient()) {
+                console.log('🌐 Running in standalone mode with anonymous player:', window.playerInfo.name);
                 return;
             }
-
+            
             try {
                 console.log('⚡️ Initializing Farcaster authentication...');
                 
@@ -1152,10 +1195,11 @@
                         
                         // Set player information from Farcaster identity
                         window.playerInfo = {
-                            name: user.username,
+                            name: user.username || `Whale${Math.floor(Math.random() * 1000)}`,
                             fid: user.fid,
                             avatar: user.pfp?.url || null,
-                            isAuthenticated: true
+                            isAuthenticated: true,
+                            isAnonymous: false
                         };
                         
                         // Notify the game that we have authenticated user info
@@ -1167,23 +1211,11 @@
                     }
                 });
                 
-                // Set default anonymous player info in case we don't get Farcaster data
-                window.playerInfo = {
-                    name: `Whale${Math.floor(Math.random() * 1000)}`,
-                    isAuthenticated: false
-                };
-                
                 console.log('Waiting for Farcaster user data...');
                 
             } catch (error) {
                 console.error('Error in Farcaster authentication:', error);
-                notifications.show('Error connecting to Farcaster', 'warning');
-                
-                // Fall back to anonymous player
-                window.playerInfo = {
-                    name: `Whale${Math.floor(Math.random() * 1000)}`,
-                    isAuthenticated: false
-                };
+                notifications.show('Running in anonymous mode', 'info', 3000);
             }
         }
         
@@ -1308,7 +1340,8 @@
             // Share game stats to Farcaster
             async shareStats() {
                 try {
-                    if (window.frameSdk) {
+                    // Check if we're in a Farcaster client and authenticated
+                    if (window.frameSdk && (window.playerInfo?.isAuthenticated || isInFarcasterClient())) {
                         // Generate share text based on stats
                         let shareText;
                         
@@ -1326,21 +1359,34 @@
                             shareText = `I just played Whale Wars and reached size ${Math.round(this.stats.finalSize)} on Farcaster! 🐳 ${this.stats.playersEaten > 0 ? `Swallowed ${this.stats.playersEaten} players!` : 'Still growing...'}`;
                         }
                         
-                        // Create a frame for sharing via Farcaster using updated SDK
-                        await window.frameSdk.actions.composeCast({
-                            text: shareText,
-                            embeds: [
-                                `https://whale-wars.onrender.com/api/gamestats?size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`
-                            ]
-                        });
+                        // Use the player's anonymous name if available
+                        if (window.playerInfo?.isAnonymous && window.playerInfo?.name) {
+                            shareText = `${window.playerInfo.name} ${shareText}`;
+                        }
                         
-                        notifications.show('Shared to Farcaster!', 'success');
+                        try {
+                            // Create a frame for sharing via Farcaster using updated SDK
+                            await window.frameSdk.actions.composeCast({
+                                text: shareText,
+                                embeds: [
+                                    `https://whale-wars.onrender.com/api/gamestats?size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`
+                                ]
+                            });
+                            
+                            notifications.show('Shared to Farcaster!', 'success');
+                        } catch (sdkError) {
+                            console.error('SDK sharing error:', sdkError);
+                            // Fall back to URL sharing if sharing via SDK fails
+                            const shareUrl = `https://whale-wars.onrender.com?share=stats&size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`;
+                            window.open(shareUrl, '_blank');
+                        }
                     } else {
-                        // Fallback for when Farcaster SDK isn't available
+                        // Fallback for anonymous mode or standalone browser
                         console.log('Farcaster SDK not available, opening sharing URL');
                         
                         const shareUrl = `https://whale-wars.onrender.com?share=stats&size=${this.stats.finalSize}&time=${this.stats.survivalTime}&fish=${this.stats.fishEaten}&players=${this.stats.playersEaten}`;
                         window.open(shareUrl, '_blank');
+                        notifications.show('Opened sharing link', 'info');
                     }
                 } catch (error) {
                     console.error('Error sharing to Farcaster:', error);
