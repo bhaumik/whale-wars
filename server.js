@@ -693,6 +693,120 @@ app.get('/preview.png', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'preview.png'));
 });
 
+// Game invite endpoint
+app.get('/api/invite', async (req, res) => {
+    try {
+        const { playerId, roomId, preview } = req.query;
+        console.log(`📊 [INVITE] Request for game invite: playerId=${playerId}, roomId=${roomId}, preview=${preview}`);
+        
+        // Validate parameters
+        if (!playerId) {
+            return res.status(400).json({ error: 'Missing player ID' });
+        }
+        
+        // Fetch player info if they exist
+        const player = players.get(playerId);
+        const playerName = player ? player.name : 'A Whale';
+        
+        // Create game room ID if not provided
+        const gameRoomId = roomId || `room-${Math.floor(Math.random() * 10000)}`;
+        
+        // If this is a preview request, send HTML with the invite frame
+        if (preview === 'true') {
+            // Use a simple HTML template for the invite preview
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                        body, html {
+                            margin: 0;
+                            padding: 0;
+                            width: 100%;
+                            height: 100%;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        }
+                        .invite-card {
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(180deg, #87CEEB 0%, #1E90FF 100%);
+                            color: white;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            align-items: center;
+                            text-align: center;
+                            padding: 20px;
+                            box-sizing: border-box;
+                        }
+                        .header {
+                            font-size: 36px;
+                            font-weight: bold;
+                            margin-bottom: 20px;
+                        }
+                        .icon {
+                            font-size: 80px;
+                            margin-bottom: 30px;
+                        }
+                        .message {
+                            font-size: 24px;
+                            margin-bottom: 40px;
+                            max-width: 80%;
+                        }
+                        .footer {
+                            font-size: 18px;
+                            opacity: 0.9;
+                            position: absolute;
+                            bottom: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="invite-card">
+                        <div class="icon">🐋</div>
+                        <div class="header">You're Invited!</div>
+                        <div class="message">${playerName} wants you to join them in Whale Wars! Grow your whale and see who becomes the biggest in the ocean.</div>
+                        <div class="footer">Tap to join the game</div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            res.setHeader('Content-Type', 'text/html');
+            return res.send(html);
+        }
+        
+        // For actual Farcaster Frame rendering
+        const frameResponse = {
+            version: "vNext",
+            image: {
+                url: `https://whale-wars.onrender.com/api/invite?playerId=${playerId}&roomId=${gameRoomId}&preview=true`,
+                aspectRatio: "1.91:1"
+            },
+            title: `${playerName} invited you to play Whale Wars!`,
+            buttons: [
+                {
+                    label: "🎮 Join Game",
+                    action: "post_redirect",
+                    target: `https://whale-wars.onrender.com?join=${gameRoomId}`
+                },
+                {
+                    label: "🌊 New Game",
+                    action: "post_redirect", 
+                    target: "https://whale-wars.onrender.com"
+                }
+            ]
+        };
+        
+        res.json(frameResponse);
+    } catch (error) {
+        console.error('❌ [ERROR] Game invite generation error:', error);
+        res.status(500).json({ error: 'Failed to generate game invite' });
+    }
+});
+
 const port = process.env.PORT || 8080;
 
 const server = app.listen(port, () => {
@@ -960,23 +1074,62 @@ wss.on('connection', (ws) => {
                         .replace(/>/g, '&gt;')
                         .substring(0, 20);
                     
+                    // Validate Farcaster data if provided
+                    let fid = null;
+                    let avatar = '/icon.png';
+                    let verified = false;
+                    let farcasterName = null;
+                    
+                    if (data.fid) {
+                        fid = String(data.fid);
+                        console.log(`👤 [AUTH] Farcaster user with FID ${fid}`);
+                        
+                        // Use provided Farcaster avatar if available and valid
+                        if (data.avatar && typeof data.avatar === 'string' && 
+                            (data.avatar.startsWith('http://') || data.avatar.startsWith('https://'))) {
+                            avatar = data.avatar;
+                            console.log(`🖼️ [AUTH] Using Farcaster avatar: ${avatar.substring(0, 50)}...`);
+                        }
+                        
+                        // Store Farcaster verification status
+                        verified = data.verified === true;
+                        
+                        // Store original Farcaster username
+                        if (data.farcasterName && typeof data.farcasterName === 'string') {
+                            farcasterName = data.farcasterName.substring(0, 30);
+                        }
+                    }
+                    
                     // Create or update player when we get their info
                     const player = {
                         id: playerId,
                         x: 2500,
                         y: 2500,
                         radius: 20,
-                        color: '#0066cc',
+                        color: data.fid ? '#6366f1' : '#0066cc', // Special color for Farcaster users
                         name: sanitizedName,
-                        fid: data.fid ? String(data.fid) : null,
-                        avatar: data.avatar && typeof data.avatar === 'string' ? data.avatar : '/icon.png',
-                        state: playerStates.ALIVE
+                        fid: fid,
+                        avatar: avatar,
+                        state: playerStates.ALIVE,
+                        verified: verified,
+                        farcasterName: farcasterName,
+                        joinTime: Date.now(),
+                        roomId: data.roomId || null
                     };
                     
                     // Add player to game
                     players.set(playerId, player);
                     console.log(`👤 [PLAYER] ${sanitizedName} (${playerId}) joined the game`);
+                    if (fid) {
+                        console.log(`👤 [PLAYER] Farcaster user with FID ${fid}${verified ? ' (verified)' : ''}`);
+                    }
                     console.log(`🌍 [WORLD] Updated player count: ${players.size}`);
+                    
+                    // Update room participants if joining a specific room
+                    if (player.roomId) {
+                        console.log(`🏠 [ROOM] Player joined room ${player.roomId}`);
+                        // You could add additional room-based logic here
+                    }
 
                     // Broadcast new player to all clients
                     wss.clients.forEach((client) => {

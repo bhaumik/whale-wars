@@ -10,15 +10,56 @@
     "description": "Compete with other players to become the largest whale in the ocean! Eat fish to grow and watch out for other players.",
     "iconUrl": "https://whale-wars.onrender.com/icon.png",
     "homeUrl": "https://whale-wars.onrender.com",
-    "imageUrl": "https://whale-wars.onrender.com/preview.png",
-    "buttonTitle": "🎮 Play Now",
-    "splashImageUrl": "https://whale-wars.onrender.com/icon.png",
-    "splashBackgroundColor": "#0066cc",
-    "webhookUrl": "https://whale-wars.onrender.com/api/webhook",
-    "callToAction": "Become the mightiest whale!",
+    "image": {
+      "url": "https://whale-wars.onrender.com/preview.png",
+      "aspectRatio": "1.91:1"
+    },
+    "buttons": [
+      {
+        "label": "🎮 Play Now",
+        "action": "post_redirect",
+        "target": "https://whale-wars.onrender.com"
+      }
+    ],
+    "splash": {
+      "url": "https://whale-wars.onrender.com/icon.png",
+      "backgroundColor": "#0066cc"
+    },
+    "webhook": {
+      "url": "https://whale-wars.onrender.com/api/webhook"
+    },
+    "media": {
+      "hero": {
+        "url": "https://whale-wars.onrender.com/preview.png",
+        "width": 1200,
+        "height": 630
+      },
+      "screenshots": [
+        {
+          "url": "https://whale-wars.onrender.com/screenshot1.png",
+          "width": 1284,
+          "height": 2778
+        },
+        {
+          "url": "https://whale-wars.onrender.com/screenshot2.png",
+          "width": 1284,
+          "height": 2778
+        }
+      ]
+    },
     "categories": ["games", "multiplayer", "arcade"],
-    "defaultAction": "launch_frame",
-    "inputText": false,
-    "orientation": "portrait"
+    "openGraph": {
+      "title": "Whale Wars - The Ultimate Whale Status",
+      "description": "Grow your whale, swallow smaller players, and claim your status as the biggest whale on Farcaster!",
+      "image": {
+        "url": "https://whale-wars.onrender.com/preview.png"
+      }
+    },
+    "tagline": "Are you whale enough?",
+    "customization": {
+      "defaultAction": "launch_frame",
+      "inputText": false,
+      "orientation": "portrait"
+    }
   }
 } 

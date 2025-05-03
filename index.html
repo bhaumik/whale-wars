@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Whale Wars</title>
-    <meta name="fc:frame" content='{"version":"next","imageUrl":"https://whale-wars.onrender.com/preview.png","button":{"title":"🐳 Become a Whale","action":{"type":"launch_frame","url":"https://whale-wars.onrender.com?v=1","name":"Whale Wars"}}}' />
+    <meta name="fc:frame" content='{"version":"vNext","image":{"url":"https://whale-wars.onrender.com/preview.png","aspectRatio":"1.91:1"},"buttons":[{"label":"🐳 Play Now","action":"post_redirect","target":"https://whale-wars.onrender.com"}]}' />
     <meta property="og:title" content="Whale Wars - The Ultimate Whale Status" />
     <meta property="og:description" content="Grow your whale, swallow smaller players, and claim your status as the biggest whale on Farcaster!" />
     <meta property="og:image" content="https://whale-wars.onrender.com/preview.png" />
@@ -602,6 +602,42 @@
                 font-size: 20px;
             }
         }
+        
+        /* Friend invite button */
+        #invite-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        
+        #invite-button:hover {
+            transform: scale(1.1);
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        @media (max-width: 768px) {
+            #invite-button {
+                top: 10px;
+                left: 10px;
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -612,6 +648,7 @@
                 <div id="leaderboard-entries"></div>
                 <div id="leaderboard-toggle">▼</div>
             </div>
+            <button id="invite-button" class="game-button" aria-label="Invite friends">🤝</button>
             <canvas id="game-canvas"></canvas>
             <div id="score" role="status" aria-live="polite">Size: 20</div>
             <div id="connection-status" class="disconnected" role="status" aria-live="polite">
@@ -1152,7 +1189,8 @@
             // Check for Farcaster authentication and initialize with user identity
             initializeFarcasterAuth();
             
-            // ... existing code ...
+            // Set up invite button
+            setupInviteButton();
         });
         
         // Automatically authenticate from Farcaster context or create anonymous player
@@ -1161,52 +1199,113 @@
             window.playerInfo = {
                 name: `Whale${Math.floor(Math.random() * 1000)}`,
                 isAuthenticated: false,
-                isAnonymous: true
+                isAnonymous: true,
+                avatar: '/icon.png'
             };
             
-            // Skip Farcaster auth in standalone mode
-            if (!window.frameSdk || !isInFarcasterClient()) {
-                console.log('🌐 Running in standalone mode with anonymous player:', window.playerInfo.name);
-                return;
+            // First, try to use the Frame SDK for authentication
+            if (window.frameSdk) {
+                try {
+                    console.log('⚡️ Initializing Farcaster authentication via SDK...');
+                    
+                    // Try to get context - this works in Farcaster clients that support the getContext API
+                    try {
+                        const context = await window.frameSdk.getContext();
+                        
+                        if (context && context.user && context.user.fid) {
+                            console.log('✅ User authenticated through Farcaster SDK context:', {
+                                username: context.user.username,
+                                fid: context.user.fid
+                            });
+                            
+                            window.playerInfo = {
+                                name: context.user.username || `Whale${Math.floor(Math.random() * 1000)}`,
+                                fid: context.user.fid,
+                                avatar: context.user.pfp?.url || '/icon.png',
+                                isAuthenticated: true,
+                                isAnonymous: false,
+                                farcasterName: context.user.username,
+                                verified: context.user.verified === true,
+                                displayName: context.user.displayName
+                            };
+                            
+                            // Notify the game that we have authenticated user info
+                            if (window.onFarcasterAuth) {
+                                window.onFarcasterAuth(window.playerInfo);
+                            }
+                            
+                            notifications.show(`Welcome, ${context.user.username}!`, 'success', 3000);
+                            return;
+                        }
+                    } catch (contextError) {
+                        console.log('Context API not available or failed:', contextError);
+                        // Continue to fallback methods
+                    }
+                    
+                    // Fallback to message-based authentication for clients that use it
+                    console.log('Falling back to message-based authentication...');
+                    
+                    // Add a timeout to avoid waiting indefinitely
+                    const authTimeout = setTimeout(() => {
+                        console.log('⏱️ Authentication timeout, proceeding with anonymous mode');
+                        startWithAnonymousMode();
+                    }, 3000);
+                    
+                    // Set up message event listener for Farcaster auth
+                    const authMessageHandler = (event) => {
+                        // Check if this is a message from Farcaster with user data
+                        if (event.data && event.data.source === 'farcaster' && event.data.user) {
+                            clearTimeout(authTimeout);
+                            
+                            const user = event.data.user;
+                            console.log('✅ User authenticated through Farcaster client message:', {
+                                username: user.username,
+                                fid: user.fid
+                            });
+                            
+                            // Set player information from Farcaster identity
+                            window.playerInfo = {
+                                name: user.username || `Whale${Math.floor(Math.random() * 1000)}`,
+                                fid: user.fid,
+                                avatar: user.pfp?.url || '/icon.png',
+                                isAuthenticated: true,
+                                isAnonymous: false,
+                                farcasterName: user.username,
+                                verified: user.verified === true,
+                                displayName: user.displayName
+                            };
+                            
+                            // Notify the game that we have authenticated user info
+                            if (window.onFarcasterAuth) {
+                                window.onFarcasterAuth(window.playerInfo);
+                            }
+                            
+                            notifications.show(`Welcome, ${user.username}!`, 'success', 3000);
+                            
+                            // Remove the event listener after successful auth
+                            window.removeEventListener('message', authMessageHandler);
+                        }
+                    };
+                    
+                    window.addEventListener('message', authMessageHandler);
+                    
+                } catch (error) {
+                    console.error('Error in Farcaster authentication setup:', error);
+                    startWithAnonymousMode();
+                }
+            } else {
+                console.log('Farcaster SDK not available, running in standalone mode');
+                startWithAnonymousMode();
             }
             
-            try {
-                console.log('⚡️ Initializing Farcaster authentication...');
-                
-                // Use the simple event-based approach for authentication
-                window.addEventListener('message', (event) => {
-                    // Check if this is a message from Farcaster with user data
-                    if (event.data && event.data.source === 'farcaster' && event.data.user) {
-                        const user = event.data.user;
-                        
-                        console.log('✅ User authenticated through Farcaster client:', {
-                            username: user.username,
-                            fid: user.fid
-                        });
-                        
-                        // Set player information from Farcaster identity
-                        window.playerInfo = {
-                            name: user.username || `Whale${Math.floor(Math.random() * 1000)}`,
-                            fid: user.fid,
-                            avatar: user.pfp?.url || null,
-                            isAuthenticated: true,
-                            isAnonymous: false
-                        };
-                        
-                        // Notify the game that we have authenticated user info
-                        if (window.onFarcasterAuth) {
-                            window.onFarcasterAuth(window.playerInfo);
-                        }
-                        
-                        notifications.show(`Welcome, ${user.username}!`, 'success', 3000);
-                    }
-                });
-                
-                console.log('Waiting for Farcaster user data via message events...');
-                
-            } catch (error) {
-                console.error('Error in Farcaster authentication setup:', error);
+            function startWithAnonymousMode() {
+                console.log('🌐 Running in anonymous mode with player:', window.playerInfo.name);
                 notifications.show('Running in anonymous mode', 'info', 3000);
+                
+                // Notify the game that we're running in anonymous mode
+                if (window.onFarcasterAuth) {
+                    window.onFarcasterAuth(window.playerInfo);
+                }
             }
         }
         
@@ -1394,6 +1493,222 @@
                 gameOverScreen.show(stats);
             }
         };
+        
+        // Add friend invite functionality
+        function setupInviteButton() {
+            const inviteButton = document.getElementById('invite-button');
+            if (!inviteButton) return;
+            
+            inviteButton.addEventListener('click', async () => {
+                try {
+                    // Check if player ID is available
+                    if (!window.playerId) {
+                        notifications.show('Please wait until game connects', 'warning');
+                        return;
+                    }
+                    
+                    // Generate a room ID if needed
+                    const roomId = window.gameRoomId || `room-${Math.floor(Math.random() * 10000)}`;
+                    window.gameRoomId = roomId;
+                    
+                    // Check if we're in a Farcaster client and can use the SDK
+                    if (window.frameSdk && (window.playerInfo?.isAuthenticated || isInFarcasterClient())) {
+                        try {
+                            // Create the invite text
+                            const inviteText = window.playerInfo?.isAnonymous 
+                                ? `${window.playerInfo.name} invites you to play Whale Wars! 🐳 Join the ocean battle now!`
+                                : `I invite you to play Whale Wars with me! 🐳 Join me in the ocean!`;
+                            
+                            // Use Farcaster SDK to share the invite
+                            await window.frameSdk.actions.composeCast({
+                                text: inviteText,
+                                embeds: [`https://whale-wars.onrender.com/api/invite?playerId=${window.playerId}&roomId=${roomId}`]
+                            });
+                            
+                            notifications.show('Invite sent!', 'success');
+                        } catch (sdkError) {
+                            console.error('SDK invite error:', sdkError);
+                            fallbackInvite();
+                        }
+                    } else {
+                        fallbackInvite();
+                    }
+                    
+                    // Fallback invite method for non-Farcaster clients
+                    function fallbackInvite() {
+                        // Create a shareable URL
+                        const inviteUrl = `https://whale-wars.onrender.com?join=${roomId}`;
+                        
+                        // Try to use the Web Share API if available
+                        if (navigator.share) {
+                            navigator.share({
+                                title: 'Join me in Whale Wars!',
+                                text: 'Join me for a game of Whale Wars!',
+                                url: inviteUrl
+                            }).then(() => {
+                                notifications.show('Invite shared!', 'success');
+                            }).catch(err => {
+                                console.error('Share error:', err);
+                                copyToClipboard(inviteUrl);
+                            });
+                        } else {
+                            copyToClipboard(inviteUrl);
+                        }
+                    }
+                    
+                    // Helper to copy the invite URL to clipboard
+                    function copyToClipboard(text) {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = text;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        
+                        try {
+                            document.execCommand('copy');
+                            notifications.show('Invite URL copied to clipboard!', 'success');
+                        } catch (err) {
+                            console.error('Copy error:', err);
+                            notifications.show('Failed to copy invite URL', 'error');
+                        } finally {
+                            document.body.removeChild(textarea);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error creating invite:', error);
+                    notifications.show('Failed to create invite', 'error');
+                }
+            });
+        }
+        
+        // Add room ID parameter handling to the game connection
+        function processGameParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinRoomId = urlParams.get('join');
+            
+            if (joinRoomId) {
+                console.log(`Joining game room: ${joinRoomId}`);
+                window.gameRoomId = joinRoomId;
+                
+                // Display a notification that we're joining a friend's game
+                if (notifications) {
+                    notifications.show('Joining a friend\'s game...', 'info');
+                }
+            }
+        }
+        
+        // Call parameter processing during initialization
+        processGameParameters();
+
+        // Update the connection function to send enhanced player info
+        function connectToServer() {
+            // ... existing connection code ...
+            
+            // When connected, send player info with enhanced Farcaster data
+            ws.addEventListener('open', () => {
+                // Update connection status
+                connectionStatus.className = 'connected';
+                connectionStatus.querySelector('.status-text').textContent = 'Connected';
+                
+                console.log('Connected to server, sending player info:', window.playerInfo);
+                
+                // Prepare player info message with enhanced Farcaster data
+                const playerInfoMessage = {
+                    type: 'playerInfo',
+                    name: window.playerInfo.name || 'Anonymous Whale',
+                    // Include all available Farcaster profile details
+                    fid: window.playerInfo.fid || null,
+                    avatar: window.playerInfo.avatar || null,
+                    verified: window.playerInfo.verified || false,
+                    farcasterName: window.playerInfo.farcasterName || null,
+                    displayName: window.playerInfo.displayName || null,
+                    sessionToken: localStorage.getItem('sessionToken') || null,
+                    roomId: window.gameRoomId || null
+                };
+                
+                ws.send(JSON.stringify(playerInfoMessage));
+            });
+            
+            // ... rest of existing connection code ...
+        }
+
+        // Enhance leaderboard entry display to show Farcaster verification
+        function updateLeaderboard(players) {
+            const leaderboardEntries = document.getElementById('leaderboard-entries');
+            if (!leaderboardEntries) return;
+            
+            // Sort players by size
+            const sortedPlayers = [...players].sort((a, b) => b.radius - a.radius);
+            
+            // Clear existing entries
+            leaderboardEntries.innerHTML = '';
+            
+            // Add entries for top players
+            const topPlayers = sortedPlayers.slice(0, 10);
+            
+            topPlayers.forEach((player, index) => {
+                const entry = document.createElement('div');
+                entry.className = 'player-entry';
+                if (player.id === window.playerId) {
+                    entry.classList.add('current-player');
+                }
+                
+                // Create entry with Farcaster-enhanced display
+                const verifiedBadge = player.verified ? '✓ ' : '';
+                const displayName = player.farcasterName ? player.farcasterName : player.name;
+                
+                entry.innerHTML = `
+                    <div class="rank">${index + 1}</div>
+                    <img class="avatar" src="${player.avatar || '/icon.png'}" alt="">
+                    <div class="name">${verifiedBadge}${displayName}</div>
+                    <div class="score">${Math.round(player.radius)}</div>
+                `;
+                
+                // Apply special styling for Farcaster users
+                if (player.fid) {
+                    entry.style.color = player.verified ? '#6366f1' : '#3b82f6';
+                }
+                
+                leaderboardEntries.appendChild(entry);
+            });
+            
+            // Add divider if there are more players
+            if (sortedPlayers.length > 10) {
+                const divider = document.createElement('div');
+                divider.className = 'divider';
+                divider.textContent = `+${sortedPlayers.length - 10} more players`;
+                leaderboardEntries.appendChild(divider);
+            }
+            
+            // Find current player's position if not in top 10
+            if (window.playerId && !topPlayers.some(p => p.id === window.playerId)) {
+                const playerIndex = sortedPlayers.findIndex(p => p.id === window.playerId);
+                if (playerIndex !== -1) {
+                    const playerRank = playerIndex + 1;
+                    const player = sortedPlayers[playerIndex];
+                    
+                    // Show current player's entry
+                    const currentEntry = document.createElement('div');
+                    currentEntry.className = 'player-entry current-player';
+                    
+                    const verifiedBadge = player.verified ? '✓ ' : '';
+                    const displayName = player.farcasterName ? player.farcasterName : player.name;
+                    
+                    currentEntry.innerHTML = `
+                        <div class="rank">${playerRank}</div>
+                        <img class="avatar" src="${player.avatar || '/icon.png'}" alt="">
+                        <div class="name">${verifiedBadge}${displayName} (You)</div>
+                        <div class="score">${Math.round(player.radius)}</div>
+                    `;
+                    
+                    // Apply special styling for Farcaster users
+                    if (player.fid) {
+                        currentEntry.style.color = player.verified ? '#6366f1' : '#3b82f6';
+                    }
+                    
+                    leaderboardEntries.appendChild(currentEntry);
+                }
+            }
+        }
     </script>
 </body>
 </html> 
