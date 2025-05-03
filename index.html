@@ -672,10 +672,25 @@
 
     <script type="module">
         // Import the SDK from CDN for direct browser usage
-        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+        import { sdk } from 'https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@0.0.37/dist/index.js';
         
         // Make the SDK available globally
         window.frameSdk = sdk;
+        
+        // Initialize the SDK immediately 
+        async function initializeSDK() {
+            try {
+                console.log('Initializing Frame SDK...');
+                // Call ready first thing to hide splash screen
+                await window.frameSdk.actions.ready();
+                console.log('SDK initialized and splash screen hidden');
+            } catch (e) {
+                console.error('Failed to initialize SDK:', e);
+            }
+        }
+        
+        // Run initialization
+        initializeSDK();
         
         // Function to enhance mobile UI
         function setupMobileUI() {
@@ -1120,47 +1135,45 @@
                 console.log('Farcaster SDK not available, running in standalone mode');
                 return;
             }
-            
+
             try {
                 console.log('⚡️ Initializing Farcaster authentication...');
                 
-                // Get Farcaster user context - this automatically authenticates the user in Farcaster clients
-                const context = await window.frameSdk.getContext();
-                
-                if (context.user && context.user.username) {
-                    console.log('✅ User authenticated through Farcaster client:', {
-                        username: context.user.username,
-                        fid: context.user.fid,
-                        pfp: context.user.pfp?.url
-                    });
-                    
-                    // Set player information from Farcaster identity
-                    window.playerInfo = {
-                        name: context.user.username,
-                        fid: context.user.fid,
-                        avatar: context.user.pfp?.url || null,
-                        isAuthenticated: true
-                    };
-                    
-                    // Notify the game that we have authenticated user info
-                    if (window.onFarcasterAuth) {
-                        window.onFarcasterAuth(window.playerInfo);
+                // Listen for Farcaster messages that contain user data
+                window.addEventListener('message', (event) => {
+                    // Check if this is a message from Farcaster with user data
+                    if (event.data && event.data.source === 'farcaster' && event.data.user) {
+                        const user = event.data.user;
+                        
+                        console.log('✅ User authenticated through Farcaster client:', {
+                            username: user.username,
+                            fid: user.fid
+                        });
+                        
+                        // Set player information from Farcaster identity
+                        window.playerInfo = {
+                            name: user.username,
+                            fid: user.fid,
+                            avatar: user.pfp?.url || null,
+                            isAuthenticated: true
+                        };
+                        
+                        // Notify the game that we have authenticated user info
+                        if (window.onFarcasterAuth) {
+                            window.onFarcasterAuth(window.playerInfo);
+                        }
+                        
+                        notifications.show(`Welcome, ${user.username}!`, 'success', 3000);
                     }
-                    
-                    notifications.show(`Welcome, ${context.user.username}!`, 'success', 3000);
-                } else {
-                    console.log('ℹ️ No Farcaster user data available, using anonymous mode');
-                    
-                    // Set anonymous player info
-                    window.playerInfo = {
-                        name: `Whale${Math.floor(Math.random() * 1000)}`,
-                        isAuthenticated: false
-                    };
-                }
+                });
                 
-                // Hide the splash screen once the app is ready and user is processed
-                await window.frameSdk.actions.ready();
-                console.log('App ready, splash screen hidden');
+                // Set default anonymous player info in case we don't get Farcaster data
+                window.playerInfo = {
+                    name: `Whale${Math.floor(Math.random() * 1000)}`,
+                    isAuthenticated: false
+                };
+                
+                console.log('Waiting for Farcaster user data...');
                 
             } catch (error) {
                 console.error('Error in Farcaster authentication:', error);
@@ -1171,13 +1184,6 @@
                     name: `Whale${Math.floor(Math.random() * 1000)}`,
                     isAuthenticated: false
                 };
-                
-                // Still hide splash screen on error
-                try {
-                    await window.frameSdk.actions.ready();
-                } catch (e) {
-                    console.error('Error hiding splash screen:', e);
-                }
             }
         }
         
